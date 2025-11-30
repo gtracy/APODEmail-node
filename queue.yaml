@@ -1,0 +1,4 @@
+queue:
+- name: emailqueue
+  rate: 20/s
+  bucket_size: 1
