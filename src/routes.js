@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const db = require('./database');
 const emailService = require('./services/emailService');
+const apodService = require('./services/apodService');
 const path = require('path');
+const axios = require('axios');
 
 // Serve index.html
 router.get('/', (req, res) => {
@@ -11,7 +13,25 @@ router.get('/', (req, res) => {
 
 // Signup Endpoint
 router.post('/signup', async (req, res) => {
-    const { email, referral, notes } = req.body;
+    console.dir(req.body);
+    console.log(process.env.RECAPTCHA_SECRET_KEY);
+    const { email, referral, notes, recaptchaToken } = req.body;
+
+    // Verify Recaptcha
+    if (!recaptchaToken) {
+        return res.status(400).send('Recaptcha is required');
+    }
+
+    try {
+        const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`;
+        const verifyResponse = await axios.post(verifyUrl);
+        if (!verifyResponse.data.success) {
+            return res.status(400).send('Recaptcha verification failed');
+        }
+    } catch (error) {
+        console.error('Recaptcha verification error:', error);
+        return res.status(500).send('Error verifying recaptcha');
+    }
 
     if (!email) {
         return res.status(400).send('Email is required');
@@ -153,6 +173,44 @@ router.get('/adhocemail', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).send('Error sending adhoc email');
+    }
+});
+
+// APOD Email Test Endpoint
+router.get('/testapod', async (req, res) => {
+    const email = req.query.email;
+    if (!email) {
+        return res.status(400).send('Missing email parameter. Usage: /testapod?email=test@example.com');
+    }
+
+    try {
+        // 1. Fetch APOD
+        const apodData = await apodService.fetchAPOD();
+
+        // 2. Personalize HTML
+        const personalizedHtml = apodData.html.replace('{{email}}', encodeURIComponent(email));
+
+        // 3. Create Task
+        const params = new URLSearchParams();
+        params.append('email', email);
+        params.append('subject', apodData.title);
+        params.append('body', personalizedHtml);
+
+        const payload = {
+            relativeUri: '/emailqueue',
+            service: 'mailer',
+            body: params.toString()
+        };
+
+        const { createTask } = require('./services/taskQueueService');
+        await createTask(payload);
+
+        // 4. Return HTML for preview
+        res.send(personalizedHtml);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error sending test APOD email');
     }
 });
 

@@ -40,11 +40,20 @@ document.addEventListener('DOMContentLoaded', () => {
             let response;
 
             if (action === 'signup') {
+                // Get Recaptcha Token
+                const recaptchaToken = grecaptcha.getResponse();
+                if (!recaptchaToken) {
+                    showFeedback('Please complete the captcha.', 'error');
+                    submitBtn.disabled = false;
+                    return;
+                }
+
                 // Prepare Signup Payload
                 const payload = {
                     email,
                     referral,
-                    notes
+                    notes,
+                    recaptchaToken
                 };
 
                 response = await fetch('/signup', {
@@ -67,7 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 showFeedback(resultText, 'success');
-                if (action === 'signup') form.reset();
+                if (action === 'signup') {
+                    form.reset();
+                    grecaptcha.reset();
+                }
             } else {
                 showFeedback(resultText || 'An error occurred. Please try again.', 'error');
             }
