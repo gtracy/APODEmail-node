@@ -8,8 +8,3 @@ Interested in signing up for the email list? Go here...
 
 https://apodemail.org
 
-### Getting Started
-If you'd like to deploy your own version, follow these steps:
-* Update app.yaml to match your GAE app name
-* Copy config-fixme.py to config.py and configure your reCAPTCHA settings
-
