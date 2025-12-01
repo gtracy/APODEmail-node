@@ -4,7 +4,9 @@ const db = require('./database');
 const emailService = require('./services/emailService');
 const apodService = require('./services/apodService');
 const path = require('path');
+const fs = require('fs');
 const axios = require('axios');
+const { createTask } = require('./services/taskQueueService');
 
 // Serve index.html
 router.get('/', (req, res) => {
@@ -15,22 +17,26 @@ router.get('/', (req, res) => {
 router.post('/signup', async (req, res) => {
     console.dir(req.body);
     console.log(process.env.RECAPTCHA_SECRET_KEY);
-    const { email, referral, notes, recaptchaToken } = req.body;
+    const { email, notes, recaptchaToken } = req.body;
 
     // Verify Recaptcha
-    if (!recaptchaToken) {
-        return res.status(400).send('Recaptcha is required');
-    }
-
-    try {
-        const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`;
-        const verifyResponse = await axios.post(verifyUrl);
-        if (!verifyResponse.data.success) {
-            return res.status(400).send('Recaptcha verification failed');
+    if (process.env.MOCK_GCP !== 'true') {
+        if (!recaptchaToken) {
+            return res.status(400).send('Recaptcha is required');
         }
-    } catch (error) {
-        console.error('Recaptcha verification error:', error);
-        return res.status(500).send('Error verifying recaptcha');
+
+        try {
+            const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`;
+            const verifyResponse = await axios.post(verifyUrl);
+            if (!verifyResponse.data.success) {
+                return res.status(400).send('Recaptcha verification failed');
+            }
+        } catch (error) {
+            console.error('Recaptcha verification error:', error);
+            return res.status(500).send('Error verifying recaptcha');
+        }
+    } else {
+        console.log("Skipping Recaptcha verification (MOCK_GCP=true)");
     }
 
     if (!email) {
@@ -50,7 +56,36 @@ router.post('/signup', async (req, res) => {
             return res.status(409).send('Email already subscribed');
         }
 
-        await db.createUser(email, referral, notes);
+        await db.createUser(email, notes);
+
+        // Send Confirmation Email
+        try {
+            const templatePath = path.join(__dirname, 'templates/added-email.html');
+            let html = fs.readFileSync(templatePath, 'utf8');
+            html = html.replace('{{ email }}', email);
+
+            const params = new URLSearchParams();
+            params.append('email', email);
+            params.append('subject', 'APOD Email Signup Confirmation');
+            params.append('body', html);
+
+            const payload = {
+                relativeUri: '/emailqueue',
+                service: 'mailer',
+                body: params.toString()
+            };
+
+            console.log(`Attempting to enqueue signup confirmation for ${email}`);
+            await createTask(payload);
+            console.log(`Enqueued signup confirmation for ${email}`);
+
+
+
+        } catch (emailError) {
+            console.error('Error sending confirmation email:', emailError);
+            // Don't fail the signup if email fails, just log it
+        }
+
         res.send('Signup successful! You have been added to the list.');
     } catch (error) {
         console.error(error);
@@ -60,6 +95,7 @@ router.post('/signup', async (req, res) => {
 
 // Unsubscribe Endpoint
 router.get('/unsubscribe', async (req, res) => {
+    console.dir(req.query);
     const email = req.query.email;
     if (!email) {
         return res.status(400).send('Email is required to unsubscribe');
@@ -70,6 +106,49 @@ router.get('/unsubscribe', async (req, res) => {
         if (!deleted) {
             return res.send('Email not found in subscription list.');
         }
+        // Send Unsubscribe Confirmation Email
+        try {
+            const templatePath = path.join(__dirname, 'templates/removed-email.html');
+            let html = fs.readFileSync(templatePath, 'utf8');
+            // Notes might be undefined, handle gracefully
+            html = html.replace('{{ notes }}', req.query.notes || '');
+
+            const params = new URLSearchParams();
+            params.append('email', email);
+            params.append('subject', 'APOD Email Removal Request');
+            params.append('body', html);
+
+            const payload = {
+                relativeUri: '/emailqueue',
+                service: 'mailer',
+                body: params.toString()
+            };
+
+            console.log(`Attempting to enqueue unsubscribe confirmation for ${email}`);
+            await createTask(payload);
+            console.log(`Enqueued unsubscribe confirmation for ${email}`);
+
+            // Send Admin Notification if notes are present
+            const notes = req.query.notes;
+            if (notes && process.env.ADMIN_EMAIL) {
+                const adminParams = new URLSearchParams();
+                adminParams.append('email', process.env.ADMIN_EMAIL);
+                adminParams.append('subject', `APOD Unsubscribe Feedback from ${email}`);
+                adminParams.append('body', `Feedback: ${notes}`);
+
+                const adminPayload = {
+                    relativeUri: '/emailqueue',
+                    service: 'mailer',
+                    body: adminParams.toString()
+                };
+                await createTask(adminPayload);
+                console.log(`Enqueued admin notification for unsubscribe feedback from ${email}`);
+            }
+
+        } catch (emailError) {
+            console.error('Error sending unsubscribe confirmation email:', emailError);
+        }
+
         res.send('You have been unsubscribed.');
     } catch (error) {
         console.error(error);
@@ -141,41 +220,6 @@ router.post('/emailqueue', async (req, res) => {
     }
 });
 
-// Adhoc Email Endpoint (Test)
-router.get('/adhocemail', async (req, res) => {
-    const fs = require('fs');
-    const templatePath = path.join(__dirname, '../public/adhocemail.html');
-
-    try {
-        const body = fs.readFileSync(templatePath, 'utf8');
-
-        const email = req.query.email;
-        if (!email) {
-            return res.status(400).send('Missing email parameter. Usage: /adhocemail?email=test@example.com');
-        }
-
-        // Create task for Python mailer
-        const params = new URLSearchParams();
-        params.append('email', email);
-        params.append('subject', 'testing');
-        params.append('body', body);
-
-        const payload = {
-            relativeUri: '/emailqueue',
-            service: 'mailer',
-            body: params.toString()
-        };
-
-        const { createTask } = require('./services/taskQueueService');
-        await createTask(payload);
-
-        res.send(body);
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error sending adhoc email');
-    }
-});
-
 // APOD Email Test Endpoint
 router.get('/testapod', async (req, res) => {
     const email = req.query.email;
@@ -202,8 +246,9 @@ router.get('/testapod', async (req, res) => {
             body: params.toString()
         };
 
-        const { createTask } = require('./services/taskQueueService');
-        await createTask(payload);
+        // turn off emails in production
+        //const { createTask } = require('./services/taskQueueService');
+        //await createTask(payload);
 
         // 4. Return HTML for preview
         res.send(personalizedHtml);

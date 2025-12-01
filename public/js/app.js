@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(form);
         const action = formData.get('action');
         const email = formData.get('email');
-        const referral = formData.get('referral');
         const notes = formData.get('notes');
 
         try {
@@ -51,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Prepare Signup Payload
                 const payload = {
                     email,
-                    referral,
                     notes,
                     recaptchaToken
                 };
@@ -66,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } else {
                 // Prepare Unsubscribe Payload (GET request as per API)
-                const params = new URLSearchParams({ email });
+                const params = new URLSearchParams({ email, notes });
                 response = await fetch(`/unsubscribe?${params.toString()}`, {
                     method: 'GET'
                 });

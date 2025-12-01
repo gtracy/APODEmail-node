@@ -52,13 +52,12 @@ if (process.env.MOCK_GCP === 'true') {
 
 const KIND_USER_SIGNUP = 'UserSignup';
 
-async function createUser(email, referral, notes) {
+async function createUser(email, notes) {
   const key = datastore.key([KIND_USER_SIGNUP]);
   const entity = {
     key: key,
     data: {
       email: email,
-      referral: referral,
       notes: notes,
       date: new Date(),
       active: true
