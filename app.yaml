@@ -1,0 +1,7 @@
+runtime: nodejs22
+version: 
+
+env_variables:
+  NODE_ENV: production
+  RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY}
+  ADMIN_EMAIL: ${ADMIN_EMAIL}

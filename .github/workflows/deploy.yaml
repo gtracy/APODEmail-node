@@ -20,6 +20,14 @@ jobs:
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
+      - name: 'Inject Secrets'
+        run: |
+          sudo apt-get install gettext-base
+          envsubst < app.yaml > app.yaml.tmp && mv app.yaml.tmp app.yaml
+        env:
+          RECAPTCHA_SECRET_KEY: ${{ secrets.RECAPTCHA_SECRET_KEY }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+
       - name: 'Deploy to App Engine'
         uses: 'google-github-actions/deploy-appengine@v2'
         with:
