@@ -1,6 +1,9 @@
 runtime: nodejs22
 version: 
 
+automatic_scaling:
+  max_instances: 10
+
 env_variables:
   NODE_ENV: production
   RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY}

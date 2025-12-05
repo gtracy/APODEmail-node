@@ -1,6 +1,8 @@
 runtime: python311
 service: mailer
 app_engine_apis: true
+automatic_scaling:
+  max_instances: 5
 entrypoint: gunicorn -b :$PORT main:app
 
 handlers:
