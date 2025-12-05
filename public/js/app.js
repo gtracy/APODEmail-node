@@ -21,6 +21,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Check URL parameters for action and email
+    const urlParams = new URLSearchParams(window.location.search);
+    const actionParam = urlParams.get('action');
+    const emailParam = urlParams.get('email');
+
+    if (emailParam) {
+        document.getElementById('email').value = emailParam;
+    }
+
+    if (actionParam === 'unsubscribe') {
+        const unsubscribeRadio = document.getElementById('action-remove');
+        if (unsubscribeRadio) {
+            unsubscribeRadio.checked = true;
+            // Trigger change event to update UI
+            unsubscribeRadio.dispatchEvent(new Event('change'));
+        }
+    }
+
     // Handle Form Submission
     form.addEventListener('submit', async (e) => {
         e.preventDefault();

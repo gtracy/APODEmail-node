@@ -96,7 +96,7 @@ async function fetchAPOD() {
                         <strong>This is an automated email. If you notice any problems, just send me a note at <a href="mailto:gtracy@gmail.com">gtracy@gmail.com</a>. 
                         You can add and remove email addresses to this distribution list here, <a href="https://apodemail.org">https://apodemail.org</a>.</strong>
                     </i>
-                    <a href="https://apodemail.org/unsubscribe?email={{email}}">Unsubscribe</a>
+                    <a href="https://apodemail.org?action=unsubscribe&email={{email}}">Unsubscribe</a>
                 </p>
             </body>
             </html>
