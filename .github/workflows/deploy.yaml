@@ -1,0 +1,27 @@
+name: Deploy to GAE
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: 'Deploy to App Engine'
+        uses: 'google-github-actions/deploy-appengine@v2'
+        with:
+          deliverables: 'app.yaml email/app.yaml cron.yaml queue.yaml'
+          project_id: '${{ secrets.GCP_PROJECT_ID }}'

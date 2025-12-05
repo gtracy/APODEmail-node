@@ -1,9 +1,7 @@
 runtime: python311
 service: mailer
 app_engine_apis: true
-
 entrypoint: gunicorn -b :$PORT main:app
-
 
 handlers:
 - url: /.*
