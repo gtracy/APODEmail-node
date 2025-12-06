@@ -15,3 +15,18 @@
 
 # Node.js dependencies:
 node_modules/
+
+# Python virtual environment
+venv/
+
+# Python pycache
+__pycache__/
+
+# Environment variables
+.env
+
+# Logs
+deployment_logs.txt
+
+# Mac system files
+.DS_Store

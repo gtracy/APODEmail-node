@@ -144,3 +144,6 @@ apod.db
 # Python venv
 venv/
 
+
+# Logs
+deployment_logs.txt
