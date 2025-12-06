@@ -6,6 +6,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const feedbackMessage = document.getElementById('feedback-message');
     const submitBtn = document.getElementById('submit-btn');
 
+    // Initial UI Setup
+    const initialAction = document.querySelector('input[name="action"]:checked');
+    if (initialAction) {
+        initialAction.dispatchEvent(new Event('change'));
+    }
+
+    // Fetch and display user count
+    async function fetchUserCount() {
+        try {
+            const response = await fetch('/api/user-count');
+            if (response.ok) {
+                const data = await response.json();
+                const displayElement = document.getElementById('user-count-display');
+                if (displayElement) {
+                    displayElement.textContent = `${data.count.toLocaleString()} active subscribers`;
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching user count:', error);
+        }
+    }
+
+    fetchUserCount();
+
     // Toggle UI based on action (Signup vs Remove)
     actionInputs.forEach(input => {
         input.addEventListener('change', (e) => {

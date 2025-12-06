@@ -259,4 +259,15 @@ router.get('/testapod', async (req, res) => {
     }
 });
 
+// User Count Endpoint
+router.get('/api/user-count', async (req, res) => {
+    try {
+        const count = await db.getUserCount();
+        res.json({ count });
+    } catch (error) {
+        console.error('Error fetching user count:', error);
+        res.status(500).json({ error: 'Failed to fetch user count' });
+    }
+});
+
 module.exports = router;
