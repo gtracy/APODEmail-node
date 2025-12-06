@@ -32,3 +32,4 @@ jobs:
         with:
           deliverables: 'app.yaml email/app.yaml cron.yaml queue.yaml'
           project_id: '${{ secrets.GCP_PROJECT_ID }}'
+          flags: '--verbosity=debug'
