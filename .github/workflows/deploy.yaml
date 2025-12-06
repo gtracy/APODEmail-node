@@ -27,9 +27,9 @@ jobs:
           RECAPTCHA_SECRET_KEY: ${{ secrets.RECAPTCHA_SECRET_KEY }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
 
-      - name: 'Deploy to App Engine'
+      - name: 'Deploy Core to App Engine'
         uses: 'google-github-actions/deploy-appengine@v2'
         with:
-          deliverables: 'app.yaml email/app.yaml cron.yaml queue.yaml'
+          deliverables: 'app.yaml'
           project_id: '${{ secrets.GCP_PROJECT_ID }}'
           flags: '--verbosity=debug'
