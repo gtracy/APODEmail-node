@@ -1,9 +1,8 @@
-name: Deploy to GAE
-
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
