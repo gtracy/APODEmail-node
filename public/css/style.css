@@ -60,6 +60,28 @@ header {
     color: var(--text-primary);
 }
 
+.social-share {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-right: 20px;
+    margin-left: auto;
+    /* Push to right, next to CTA */
+}
+
+.social-share a {
+    color: var(--text-secondary);
+    transition: var(--transition);
+    display: flex;
+    /* Fix vertical alignment of SVGs */
+    align-items: center;
+}
+
+.social-share a:hover {
+    color: var(--accent-color);
+    transform: translateY(-2px);
+}
+
 .cta {
     transform: scale(0.6);
     transform-origin: right center;
