@@ -3,6 +3,10 @@ const { fetchAPOD } = require('./apodService');
 const { createTask } = require('./taskQueueService');
 
 // 1. Enqueue Logic (Called by Cron/Trigger)
+const cheerio = require('cheerio');
+const crypto = require('crypto');
+
+// 1. Enqueue Logic (Called by Cron/Trigger)
 async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
     console.log("Starting enqueue process (Hybrid Mode)...");
     try {
@@ -18,6 +22,27 @@ async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
         const users = await db.getUsersByDateRange(year, startMonth, endMonth);
         console.log(`Found ${users.length} subscribers for range ${year}/${startMonth}-${endMonth}.`);
 
+        // optimize: perform cheerio parsing once
+        const $ = cheerio.load(apodData.html);
+
+        // Add UTM parameters to all links
+        $('a').each((i, link) => {
+            const href = $(link).attr('href');
+            if (href && !href.startsWith('#') && !href.startsWith('mailto:')) {
+                try {
+                    const urlObj = new URL(href);
+                    urlObj.searchParams.set('utm_source', 'newsletter');
+                    urlObj.searchParams.set('utm_medium', 'email');
+                    urlObj.searchParams.set('utm_campaign', 'daily_apod');
+                    $(link).attr('href', urlObj.toString());
+                } catch (e) {
+                    // Ignore invalid URLs
+                }
+            }
+        });
+
+        const trackedHtmlTemplate = $.html();
+
         let count = 0;
         for (const user of users) {
             try {
@@ -27,7 +52,25 @@ async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
                 params.append('email', user.email);
                 params.append('subject', apodData.title);
 
-                const personalizedHtml = apodData.html.replace('{{email}}', encodeURIComponent(user.email));
+                // Personalize HTML
+                let personalizedHtml = trackedHtmlTemplate.replace('{{email}}', encodeURIComponent(user.email));
+
+                // Add Open Tracking Pixel (GA4 Measurement Protocol)
+                // https://www.google-analytics.com/g/collect?v=2&tid=MEASUREMENT_ID&cid=CLIENT_ID&en=email_open...
+                const clientId = crypto.randomUUID();
+                const measurementId = 'G-SRM03RK860'; // GA4 Measurement ID
+                const pixelUrl = new URL('https://www.google-analytics.com/g/collect');
+                pixelUrl.searchParams.set('v', '2');
+                pixelUrl.searchParams.set('tid', measurementId);
+                pixelUrl.searchParams.set('cid', clientId);
+                pixelUrl.searchParams.set('en', 'email_open'); // Event Name
+                pixelUrl.searchParams.set('cs', 'newsletter'); // Campaign Source
+                pixelUrl.searchParams.set('cm', 'email');      // Campaign Medium
+                pixelUrl.searchParams.set('cn', 'daily_apod'); // Campaign Name
+
+                // Add the pixel image
+                personalizedHtml += `<img src="${pixelUrl.toString()}" width="1" height="1" style="display:none;"/>`;
+
                 params.append('body', personalizedHtml);
 
                 const payload = {
