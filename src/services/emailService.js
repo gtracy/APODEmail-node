@@ -28,7 +28,7 @@ async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
         // Add UTM parameters to all links
         $('a').each((i, link) => {
             const href = $(link).attr('href');
-            if (href && !href.startsWith('#') && !href.startsWith('mailto:')) {
+            if (href && !href.startsWith('#') && !href.startsWith('mailto:') && !href.includes('action=unsubscribe')) {
                 try {
                     const urlObj = new URL(href);
                     urlObj.searchParams.set('utm_source', 'newsletter');
