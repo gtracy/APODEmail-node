@@ -147,3 +147,7 @@ venv/
 
 # Logs
 deployment_logs.txt
+
+# Local test scripts
+test_apod_email.js
+test_captcha.js
