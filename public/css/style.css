@@ -43,8 +43,8 @@ header {
 }
 
 .nav-wrapper {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
 }
 
@@ -64,9 +64,23 @@ header {
     display: flex;
     gap: 15px;
     align-items: center;
-    margin-right: 20px;
-    margin-left: auto;
-    /* Push to right, next to CTA */
+    justify-self: center;
+}
+
+.cta {
+    justify-self: end;
+}
+
+/* Mobile Header Layout */
+@media (max-width: 768px) {
+    .nav-wrapper {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .nav-links {
+        display: none;
+    }
 }
 
 .social-share a {
