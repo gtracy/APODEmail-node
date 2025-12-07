@@ -1,11 +1,8 @@
-const axios = require('axios');
-
-const API_URL = "https://apod.ellanan.com/api";
+const { getDataByDate } = require('./apodScraper');
 
 async function fetchAPOD() {
     try {
-        const response = await axios.get(API_URL);
-        const data = response.data;
+        const data = await getDataByDate(new Date());
 
         // Data structure:
         // {
