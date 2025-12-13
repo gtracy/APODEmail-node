@@ -27,15 +27,9 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow-x: auto;
-            /* Enable horizontal scrolling */
-        }
-
-        .chart-scroll-wrapper {
+            /* overflow-x: auto; Removed to allow page scroll */
             min-width: 800px;
-            /* Ensure graph isn't squished */
-            height: 100%;
-            position: relative;
+            /* Force page scroll on mobile */
         }
 
         .stats-info-top {
@@ -126,9 +120,7 @@
             </div>
 
             <div class="chart-container">
-                <div class="chart-scroll-wrapper">
-                    <canvas id="signupChart"></canvas>
-                </div>
+                <canvas id="signupChart"></canvas>
             </div>
 
             <!-- Last Updated (Below Graph) -->
