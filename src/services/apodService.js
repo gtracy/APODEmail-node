@@ -59,19 +59,13 @@ async function fetchAPOD() {
             <body bgcolor="#F4F4FF" text="#000000" link="#0000FF" vlink="#7F0F9F" alink="#FF0000">
                 <center>
                     <h1> Astronomy Picture of the Day </h1>
-                    <p>
-                        <a href="https://apod.nasa.gov/apod/archivepix.html">Discover the cosmos!</a>
-                        Each day a different image or photograph of our fascinating universe is featured, along with a brief explanation written by a professional astronomer.
-                    </p>
-                    <p>
-                        ${data.date}
-                    </p>
+                    <p> ${data.date} </p>
+                    <b> ${data.title} </b> <br> 
                 </center>
                 
                 ${mediaHtml}
 
                 <center>
-                    <b> ${data.title} </b> <br> 
                     ${copyrightHtml}
                 </center> 
                 
@@ -90,10 +84,8 @@ async function fetchAPOD() {
                 <hr>
                 <p>
                     <i>
-                        <strong>This is an automated email. If you notice any problems, just send me a note at <a href="mailto:gtracy@gmail.com">gtracy@gmail.com</a>. 
-                        You can add and remove email addresses to this distribution list here, <a href="https://apodemail.org">https://apodemail.org</a>.</strong>
-                    </i>
-                    <a href="https://apodemail.org?action=unsubscribe&email={{email}}">Unsubscribe</a>
+                        <i>This is an automated email. You can add and remove your email addresses from the distribution list here, <a href="https://apodemail.org">https://apodemail.org</a>.</i>
+                    </i> or <a href="https://apodemail.org?action=unsubscribe&email={{email}}">unsubscribe here</a>
                 </p>
             </body>
             </html>
