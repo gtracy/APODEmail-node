@@ -36,7 +36,7 @@
         content="Start your day with the universe. Get NASA's APOD delivered to your inbox every morning.">
     <meta name="twitter:image" content="https://apodemail.org/img/earth.jpg">
 
-    <link rel="shortcut icon" href="img/favicon.ico">
+    <link rel="shortcut icon" href="img/favicon.png" type="image/png">
     <link rel="stylesheet" href="css/style.css">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,6 +44,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
     <!-- Recaptcha -->
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "url": "https://apodemail.org/",
+          "name": "APOD Email",
+          "description": "Get the NASA Astronomy Picture of the Day delivered to your inbox every morning.",
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "Service",
+          "name": "Astronomy Picture of the Day Daily Email",
+          "provider": {
+            "@type": "Person",
+            "name": "Greg Tracy",
+            "url": "https://apodemail.org"
+          },
+          "description": "A daily email service delivering NASA's Astronomy Picture of the Day directly to your inbox.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock"
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 
 <body>
