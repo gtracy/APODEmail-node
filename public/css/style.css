@@ -161,6 +161,17 @@ main {
     text-align: left;
 }
 
+.credits a {
+    color: #90caf9;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.credits a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
 footer {
     padding: 20px 0;
     margin-top: auto;
