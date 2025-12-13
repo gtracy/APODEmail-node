@@ -3,6 +3,10 @@ cron:
   url: /usercount
   schedule: every 48 hours
 
+- description: generate signup stats
+  url: /tasks/generate-stats
+  schedule: every 24 hours
+
 - description: daily APOD email
   url: /dailyemail/2009/1/7
   schedule: every day 12:00
@@ -298,6 +302,23 @@ cron:
   schedule: every day 13:49
   timezone: America/Chicago
 
-- description: generate signup stats
-  url: /tasks/generate-stats
-  schedule: every 24 hours
+- description: daily APOD email
+  url: /dailyemail/2026/1/3
+  schedule: every day 13:50
+  timezone: America/Chicago
+
+- description: daily APOD email
+  url: /dailyemail/2026/4/7
+  schedule: every day 13:51
+  timezone: America/Chicago
+
+- description: daily APOD email
+  url: /dailyemail/2026/8/10
+  schedule: every day 13:52
+  timezone: America/Chicago
+
+- description: daily APOD email
+  url: /dailyemail/2026/11/12
+  schedule: every day 13:53
+  timezone: America/Chicago
+
