@@ -171,7 +171,8 @@ router.get('/usercount', async (req, res) => {
 // Cron Trigger Endpoint (Legacy: /dailyemail/year/startMonth/endMonth)
 router.get('/dailyemail/:year/:startMonth/:endMonth', async (req, res) => {
     // Verify it's a cron request (GAE adds this header)
-    if (process.env.NODE_ENV === 'production' && !req.get('X-AppEngine-Cron')) {
+    // Removed NODE_ENV check to enforce security everywhere.
+    if (!req.get('X-AppEngine-Cron')) {
         return res.status(403).send('Forbidden');
     }
 
@@ -205,7 +206,8 @@ router.get('/dailyemail/:year/:startMonth/:endMonth', async (req, res) => {
 // Worker Endpoint (Legacy: /emailqueue)
 router.post('/emailqueue', async (req, res) => {
     // Verify it's a task queue request
-    if (process.env.NODE_ENV === 'production' && !req.get('X-AppEngine-TaskName')) {
+    // Removed NODE_ENV check
+    if (!req.get('X-AppEngine-TaskName')) {
         return res.status(403).send('Forbidden');
     }
 
@@ -222,6 +224,11 @@ router.post('/emailqueue', async (req, res) => {
 
 // APOD Email Test Endpoint
 router.get('/testapod', async (req, res) => {
+    // SECURED: Test endpoint disabled in production
+    if (process.env.NODE_ENV === 'production') {
+        return res.status(403).send('Forbidden: Test endpoint disabled in production.');
+    }
+
     const email = req.query.email;
     if (!email) {
         return res.status(400).send('Missing email parameter. Usage: /testapod?email=test@example.com');
@@ -267,6 +274,51 @@ router.get('/api/user-count', async (req, res) => {
     } catch (error) {
         console.error('Error fetching user count:', error);
         res.status(500).json({ error: 'Failed to fetch user count' });
+    }
+});
+
+const statsService = require('./services/statsService');
+
+// Stats Generation Endpoint (Cron)
+router.get('/tasks/generate-stats', async (req, res) => {
+    // Verify it's a cron request
+    // Removed NODE_ENV check
+    if (!req.get('X-AppEngine-Cron')) {
+        return res.status(403).send('Forbidden');
+    }
+
+    try {
+        const stats = await statsService.generateAndSaveStats();
+        res.json({ message: 'Stats generated', stats });
+    } catch (error) {
+        console.error('Error generating stats:', error);
+        res.status(500).send('Error generating stats');
+    }
+});
+
+// Stats Visualization Page
+router.get('/stats', async (req, res) => {
+    try {
+        const stats = await statsService.getCachedStats();
+
+        if (!stats) {
+            // Fallback if no stats generated yet
+            return res.send('Stats are being generated. Please check back later.');
+        }
+
+        const templatePath = path.join(__dirname, 'templates/visualization.html');
+        let html = fs.readFileSync(templatePath, 'utf8');
+
+        // Simple template injection
+        html = html.replace('{{ labels }}', JSON.stringify(stats.labels))
+            .replace('{{ data }}', JSON.stringify(stats.data))
+            .replace('{{ total }}', stats.total)
+            .replace('{{ generatedAt }}', stats.generatedAt);
+
+        res.send(html);
+    } catch (error) {
+        console.error('Error serving stats page:', error);
+        res.status(500).send('Error loading stats');
     }
 });
 

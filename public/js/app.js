@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 const displayElement = document.getElementById('user-count-display');
                 if (displayElement) {
-                    displayElement.textContent = `${data.count.toLocaleString()} active subscribers`;
+                    displayElement.innerHTML = `${data.count.toLocaleString()} active subscribers - <a href="/stats" style="color: inherit; text-decoration: underline;">see more stats</a>`;
                 }
             }
         } catch (error) {
