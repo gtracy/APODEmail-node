@@ -151,3 +151,8 @@ deployment_logs.txt
 # Local test scripts
 test_apod_email.js
 test_captcha.js
+email_preview.html
+
+# Python venv
+venv/
+venv311/

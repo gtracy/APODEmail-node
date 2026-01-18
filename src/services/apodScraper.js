@@ -30,6 +30,7 @@ async function getDataByDate(dateObj) {
         const imageElement = $('a[href^=image] img[src^=image], button img[src^=image]');
         const videoElement = $('iframe');
         const embedElement = $('embed');
+        const nativeVideoElement = $('video'); // Detect native HTML5 video tags
 
         // Explanation extraction - preserving HTML
         // Finding the paragraph that follows the center tags. 
@@ -67,7 +68,18 @@ async function getDataByDate(dateObj) {
         const imageUrl = imgSrc ? `https://apod.nasa.gov/apod/${imgSrc}` : undefined;
         const hdImageUrl = imgHref ? `https://apod.nasa.gov/apod/${imgHref}` : undefined;
 
-        const videoUrl = videoElement.attr('src') || embedElement.attr('src');
+        // Extract video URL from iframe/embed OR native video source tag
+        let videoUrl = videoElement.attr('src') || embedElement.attr('src');
+
+        // Check for native HTML5 video tag
+        if (!videoUrl && nativeVideoElement.length > 0) {
+            const sourceElement = nativeVideoElement.find('source');
+            if (sourceElement.length > 0) {
+                const src = sourceElement.first().attr('src');
+                // Native video sources are relative paths like "image/2601/Eruption_SDO.mp4"
+                videoUrl = src ? `https://apod.nasa.gov/apod/${src}` : undefined;
+            }
+        }
 
         const media_type = imageUrl ? 'image' : (videoUrl ? 'video' : 'other');
         const finalUrl = imageUrl || videoUrl;

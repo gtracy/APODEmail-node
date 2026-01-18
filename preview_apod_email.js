@@ -1,60 +1,65 @@
-const { getDataByDate } = require('./apodScraper');
+/**
+ * APOD Email Preview Generator
+ * 
+ * This script generates an HTML preview of the APOD email for any given date.
+ * Useful for testing email formatting before deployment.
+ * 
+ * Usage:
+ *   1. Edit the TARGET_DATE constant below to your desired date
+ *   2. Run: node preview_apod_email.js
+ *   3. Open email_preview.html in a browser to view the result
+ */
 
-async function fetchAPOD() {
+const { getDataByDate } = require('./src/services/apodScraper');
+const fs = require('fs');
+
+// ============================================
+// CONFIGURATION: Edit this date to preview a different APOD
+// Format: YYYY-MM-DD
+// ============================================
+const TARGET_DATE = '2026-01-13';
+
+async function generateEmailPreview() {
     try {
-        const data = await getDataByDate(new Date());
+        console.log(`Generating email preview for ${TARGET_DATE}...\n`);
 
-        // Data structure:
-        // {
-        //   "title": "Moon Games",
-        //   "explanation": "...",
-        //   "date": "2025-11-29",
-        //   "hdurl": "...",
-        //   "url": "...",
-        //   "media_type": "image",
-        //   "copyright": "..."
-        // }
+        // Parse the date string
+        const [year, month, day] = TARGET_DATE.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
 
+        // Fetch data from APOD
+        const data = await getDataByDate(date);
+
+        console.log('✅ Scraped data:');
+        console.log('   Title:', data.title);
+        console.log('   Media Type:', data.media_type);
+        console.log('   URL:', data.url);
+        console.log('   Date:', data.date);
+        console.log();
+
+        // Generate HTML using same logic as apodService.js
         const title = `APOD - ${data.title}`;
-
-        // Construct HTML manually
         let mediaHtml = '';
-        if (data.media_type === 'image') {
-            mediaHtml = `
-                <center>
-                    <a href="${data.hdurl || data.url}">
-                        <img src="${data.url}" alt="${data.title}" style="max-width:100%">
-                    </a>
-                </center>
-            `;
-        } else if (data.media_type === 'video') {
-            // Detect video type: YouTube/Vimeo embed vs native HTML5 video
+
+        if (data.media_type === 'video') {
             const isYouTubeEmbed = data.url.includes('youtube.com/embed') || data.url.includes('youtu.be');
             const isVimeoEmbed = data.url.includes('vimeo.com');
 
             if (isYouTubeEmbed || isVimeoEmbed) {
-                // Handle YouTube/Vimeo embeds (existing logic)
+                console.log('   Video Type: YouTube/Vimeo embed');
                 const videoIdMatch = data.url.match(/embed\/(\S+)[?]/) || data.url.match(/embed\/([^?]+)/);
                 let videoPreview = `<center><a href="${data.url}">${data.url}</a></center>`;
-
                 if (videoIdMatch) {
                     const videoId = videoIdMatch[1];
                     const imgUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-                    videoPreview += `
-                        <br>
-                        <center>
-                            <a href="${data.url}">
-                                <img src="${imgUrl}">
-                            </a>
-                        </center>
-                     `;
+                    videoPreview += `<br><center><a href="${data.url}"><img src="${imgUrl}"></a></center>`;
                 }
                 mediaHtml = videoPreview;
             } else {
-                // Handle native HTML5 video tags
-                // Construct APOD URL from date (format: ap260113.html from 2026-01-13)
-                const dateStr = data.date.replace(/-/g, '').slice(2); // "2026-01-13" -> "260113"
+                console.log('   Video Type: Native HTML5 video');
+                const dateStr = data.date.replace(/-/g, '').slice(2);
                 const apodUrl = `https://apod.nasa.gov/apod/ap${dateStr}.html`;
+                console.log('   APOD URL:', apodUrl);
 
                 mediaHtml = `
                     <center style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -83,6 +88,15 @@ async function fetchAPOD() {
                     </center>
                 `;
             }
+        } else if (data.media_type === 'image') {
+            console.log('   Media Type: Image');
+            mediaHtml = `
+                <center>
+                    <a href="${data.hdurl || data.url}">
+                        <img src="${data.url}" alt="${data.title}" style="max-width:100%">
+                    </a>
+                </center>
+            `;
         }
 
         const copyrightHtml = data.copyright ? `<b>Image Credit & Copyright:</b> ${data.copyright}` : '';
@@ -96,13 +110,19 @@ async function fetchAPOD() {
             <body bgcolor="#F4F4FF" text="#000000" link="#0000FF" vlink="#7F0F9F" alink="#FF0000">
                 <center>
                     <h1> Astronomy Picture of the Day </h1>
-                    <p> ${data.date} </p>
-                    <b> ${data.title} </b> <br> 
+                    <p>
+                        <a href="https://apod.nasa.gov/apod/archivepix.html">Discover the cosmos!</a>
+                        Each day a different image or photograph of our fascinating universe is featured, along with a brief explanation written by a professional astronomer.
+                    </p>
+                    <p>
+                        ${data.date}
+                    </p>
                 </center>
                 
                 ${mediaHtml}
 
                 <center>
+                    <b> ${data.title} </b> <br> 
                     ${copyrightHtml}
                 </center> 
                 
@@ -121,22 +141,26 @@ async function fetchAPOD() {
                 <hr>
                 <p>
                     <i>
-                        <i>This is an automated email. You can add and remove your email addresses from the distribution list here, <a href="https://apodemail.org">https://apodemail.org</a>.</i>
-                    </i> or <a href="https://apodemail.org?action=unsubscribe&email={{email}}">unsubscribe here</a>
+                        <strong>This is an automated email. If you notice any problems, just send me a note at <a href="mailto:gtracy@gmail.com">gtracy@gmail.com</a>. 
+                        You can add and remove email addresses to this distribution list here, <a href="https://apodemail.org">https://apodemail.org</a>.</strong>
+                    </i>
+                    <a href="https://apodemail.org?action=unsubscribe&email={{email}}">Unsubscribe</a>
                 </p>
             </body>
             </html>
         `;
 
-        return {
-            title: title,
-            html: html
-        };
+        // Save to file
+        const outputFile = 'email_preview.html';
+        fs.writeFileSync(outputFile, html);
+        console.log(`\n✅ Email preview saved to ${outputFile}`);
+        console.log(`   Open file://${process.cwd()}/${outputFile} to view\n`);
 
     } catch (error) {
-        console.error("Error fetching APOD from API:", error);
-        throw error;
+        console.error('❌ Error:', error.message);
+        console.error(error.stack);
+        process.exit(1);
     }
 }
 
-module.exports = { fetchAPOD };
+generateEmailPreview();
