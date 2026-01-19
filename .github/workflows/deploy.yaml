@@ -1,11 +1,12 @@
+name: Deploy Production
+
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    tags:
+      - '*' # Triggers on ANY tag push
 
 jobs:
-  deploy:
+  deploy_prod:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
@@ -13,6 +14,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # SANITIZATION STEP
+      - name: Sanitize Version
+        id: vars
+        run: |
+          RAW_TAG=${{ github.ref_name }}
+          # Lowercase -> Replace separators with hyphens -> Remove illegal chars
+          CLEAN_VER=$(echo "$RAW_TAG" | tr '[:upper:]' '[:lower:]' | sed 's/[\._ ]/-/g' | sed 's/[^a-z0-9-]//g')
+          echo "version=$CLEAN_VER" >> $GITHUB_OUTPUT
 
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
@@ -27,9 +37,19 @@ jobs:
           RECAPTCHA_SECRET_KEY: ${{ secrets.RECAPTCHA_SECRET_KEY }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
 
-      - name: 'Deploy Core to App Engine'
+      # DEPLOY STEP
+      - id: 'deploy'
         uses: 'google-github-actions/deploy-appengine@v2'
         with:
-          deliverables: 'app.yaml'
+          version: '${{ steps.vars.outputs.version }}'
           project_id: '${{ secrets.GCP_PROJECT_ID }}'
+          promote: true
+          stop_previous_version: true
           flags: '--verbosity=debug'
+
+      # JANITOR STEP (Keeps last 10 versions)
+      - name: Prune Old Versions
+        run: |
+          gcloud app versions list --service=default --format="value(id)" --sort-by="~createTime" \
+          | tail -n +11 \
+          | xargs -r gcloud app versions delete --quiet
