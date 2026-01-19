@@ -46,10 +46,3 @@ jobs:
           promote: true
           stop_previous_version: true
           flags: '--verbosity=debug'
-
-      # JANITOR STEP (Keeps last 10 versions)
-      - name: Prune Old Versions
-        run: |
-          gcloud app versions list --service=default --format="value(id)" --sort-by="~createTime" \
-          | tail -n +11 \
-          | xargs -r gcloud app versions delete --quiet
