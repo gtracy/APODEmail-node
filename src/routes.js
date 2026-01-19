@@ -6,7 +6,7 @@ const apodService = require('./services/apodService');
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
-const { createTask } = require('./services/taskQueueService');
+const taskQueueService = require('./services/taskQueueService');
 
 // Serve index.html
 router.get('/', (req, res) => {
@@ -76,7 +76,7 @@ router.post('/signup', async (req, res) => {
             };
 
             console.log(`Attempting to enqueue signup confirmation for ${email}`);
-            await createTask(payload);
+            await taskQueueService.createTask(payload);
             console.log(`Enqueued signup confirmation for ${email}`);
 
 
@@ -125,7 +125,7 @@ router.get('/unsubscribe', async (req, res) => {
             };
 
             console.log(`Attempting to enqueue unsubscribe confirmation for ${email}`);
-            await createTask(payload);
+            await taskQueueService.createTask(payload);
             console.log(`Enqueued unsubscribe confirmation for ${email}`);
 
             // Send Admin Notification if notes are present
@@ -141,7 +141,7 @@ router.get('/unsubscribe', async (req, res) => {
                     service: 'mailer',
                     body: adminParams.toString()
                 };
-                await createTask(adminPayload);
+                await taskQueueService.createTask(adminPayload);
                 console.log(`Enqueued admin notification for unsubscribe feedback from ${email}`);
             }
 
