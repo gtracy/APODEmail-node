@@ -72,20 +72,7 @@ if (process.env.MOCK_GCP === 'true') {
 
 const KIND_USER_SIGNUP = 'UserSignup';
 
-async function createUser(email, notes) {
-  const key = datastore.key([KIND_USER_SIGNUP]);
-  const entity = {
-    key: key,
-    data: {
-      email: email,
-      notes: notes,
-      date: new Date(),
-      active: true
-    },
-  };
-  await datastore.save(entity);
-  return key;
-}
+
 
 async function getUserByEmail(email) {
   // For mock testing, if email is 'test@example.com', return a mock user?
@@ -101,16 +88,7 @@ async function getUserByEmail(email) {
   return users.length > 0 ? users[0] : null;
 }
 
-async function deleteUser(email) {
-  const user = await getUserByEmail(email);
-  if (user) {
-    await datastore.delete(user[datastore.KEY]);
-    return true;
-  }
-  // If mock, maybe we want to return true to simulate success?
-  if (process.env.MOCK_GCP === 'true') return true;
-  return false;
-}
+
 
 async function getUserCount() {
   const query = datastore.createQuery(KIND_USER_SIGNUP).select('__key__');
