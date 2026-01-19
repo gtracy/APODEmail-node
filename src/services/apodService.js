@@ -1,8 +1,8 @@
-const { getDataByDate } = require('./apodScraper');
+const apodScraper = require('./apodScraper');
 
 async function fetchAPOD() {
     try {
-        const data = await getDataByDate(new Date());
+        const data = await apodScraper.getDataByDate(new Date());
 
         // Data structure:
         // {

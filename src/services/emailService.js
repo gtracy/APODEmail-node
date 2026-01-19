@@ -1,6 +1,6 @@
 const db = require('../database');
-const { fetchAPOD } = require('./apodService');
-const { createTask } = require('./taskQueueService');
+const apodService = require('./apodService');
+const taskQueueService = require('./taskQueueService');
 
 // 1. Enqueue Logic (Called by Cron/Trigger)
 const cheerio = require('cheerio');
@@ -10,7 +10,7 @@ const crypto = require('crypto');
 async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
     console.log("Starting enqueue process (Hybrid Mode)...");
     try {
-        const apodData = await fetchAPOD();
+        const apodData = await apodService.fetchAPOD();
         console.log(`Fetched APOD: ${apodData.title}`);
 
         // Get users (filtered or all)
@@ -79,7 +79,7 @@ async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
                     body: params.toString()
                 };
 
-                await createTask(payload);
+                await taskQueueService.createTask(payload);
                 count++;
             } catch (err) {
                 console.error(`Failed to enqueue email for user ${user.email}:`, err);
