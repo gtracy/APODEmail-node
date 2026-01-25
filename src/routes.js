@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const taskQueueService = require('./services/taskQueueService');
+const validator = require('validator');
 
 // Serve index.html
 router.get('/', (req, res) => {
@@ -16,7 +17,7 @@ router.get('/', (req, res) => {
 // Signup Endpoint
 router.post('/signup', async (req, res) => {
     console.dir(req.body);
-    console.log(process.env.RECAPTCHA_SECRET_KEY);
+    // console.log(process.env.RECAPTCHA_SECRET_KEY);
     const { email, notes, recaptchaToken } = req.body;
 
     // Verify Recaptcha
@@ -44,8 +45,8 @@ router.post('/signup', async (req, res) => {
     }
 
     // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!validator.isEmail(email)) {
         return res.status(400).send('Invalid email format');
     }
 

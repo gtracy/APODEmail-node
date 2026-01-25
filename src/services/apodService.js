@@ -29,8 +29,22 @@ async function fetchAPOD() {
             `;
         } else if (data.media_type === 'video') {
             // Detect video type: YouTube/Vimeo embed vs native HTML5 video
-            const isYouTubeEmbed = data.url.includes('youtube.com/embed') || data.url.includes('youtu.be');
-            const isVimeoEmbed = data.url.includes('vimeo.com');
+            let isYouTubeEmbed = false;
+            let isVimeoEmbed = false;
+
+            try {
+                const urlObj = new URL(data.url);
+                const hostname = urlObj.hostname;
+                // Strict hostname check to prevent "evil-youtube.com" bypasses
+                if (hostname === 'youtube.com' || hostname === 'www.youtube.com' || hostname === 'youtu.be') {
+                    isYouTubeEmbed = true;
+                }
+                if (hostname === 'vimeo.com' || hostname === 'www.vimeo.com' || hostname === 'player.vimeo.com') {
+                    isVimeoEmbed = true;
+                }
+            } catch (e) {
+                console.error('Invalid URL in APOD data:', data.url);
+            }
 
             if (isYouTubeEmbed || isVimeoEmbed) {
                 // Handle YouTube/Vimeo embeds (existing logic)

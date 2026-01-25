@@ -1,49 +1,76 @@
 /**
  * APOD Email Preview Generator
  * 
- * This script generates an HTML preview of the APOD email for any given date.
- * Useful for testing email formatting before deployment.
+ * This script generates an HTML preview of the APOD email for:
+ * 1. A fixed date known to have a video (2026-01-13) - for regression testing video handling.
+ * 2. Today's date - to see the current APOD.
  * 
  * Usage:
- *   1. Edit the TARGET_DATE constant below to your desired date
- *   2. Run: node preview_apod_email.js
- *   3. Open email_preview.html in a browser to view the result
+ *   node preview_apod_email.js
+ * 
+ * Output:
+ *   - email_preview_2026-01-13.html
+ *   - email_preview_YYYY-MM-DD.html (today)
  */
 
 const { getDataByDate } = require('./src/services/apodScraper');
 const fs = require('fs');
 
-// ============================================
-// CONFIGURATION: Edit this date to preview a different APOD
-// Format: YYYY-MM-DD
-// ============================================
-const TARGET_DATE = '2026-01-13';
+async function runPreviews() {
+    // 1. Fixed date (Video APOD)
+    const fixedDate = '2026-01-13';
 
-async function generateEmailPreview() {
+    // 2. Today's date
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' +
+        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        String(today.getDate()).padStart(2, '0');
+
+    // Use a Set to avoid duplicates if today IS the fixed date
+    const targetDates = new Set([fixedDate, todayStr]);
+
+    console.log(`Starting preview generation for: ${Array.from(targetDates).join(', ')}`);
+
+    for (const dateStr of targetDates) {
+        await generateEmailPreview(dateStr);
+    }
+}
+
+async function generateEmailPreview(dateStr) {
     try {
-        console.log(`Generating email preview for ${TARGET_DATE}...\n`);
+        console.log(`\n---------------------------------------------------------`);
+        console.log(`Generating email preview for ${dateStr}...`);
 
         // Parse the date string
-        const [year, month, day] = TARGET_DATE.split('-').map(Number);
+        const [year, month, day] = dateStr.split('-').map(Number);
         const date = new Date(year, month - 1, day);
 
         // Fetch data from APOD
         const data = await getDataByDate(date);
 
-        console.log('✅ Scraped data:');
-        console.log('   Title:', data.title);
-        console.log('   Media Type:', data.media_type);
-        console.log('   URL:', data.url);
-        console.log('   Date:', data.date);
-        console.log();
+        console.log(`✅ Scraped data: ${data.title}`);
 
         // Generate HTML using same logic as apodService.js
         const title = `APOD - ${data.title}`;
         let mediaHtml = '';
 
         if (data.media_type === 'video') {
-            const isYouTubeEmbed = data.url.includes('youtube.com/embed') || data.url.includes('youtu.be');
-            const isVimeoEmbed = data.url.includes('vimeo.com');
+            let isYouTubeEmbed = false;
+            let isVimeoEmbed = false;
+
+            try {
+                const urlObj = new URL(data.url);
+                const hostname = urlObj.hostname;
+                // Strict hostname check
+                if (hostname === 'youtube.com' || hostname === 'www.youtube.com' || hostname === 'youtu.be') {
+                    isYouTubeEmbed = true;
+                }
+                if (hostname === 'vimeo.com' || hostname === 'www.vimeo.com' || hostname === 'player.vimeo.com') {
+                    isVimeoEmbed = true;
+                }
+            } catch (e) {
+                console.error('Invalid URL:', data.url);
+            }
 
             if (isYouTubeEmbed || isVimeoEmbed) {
                 console.log('   Video Type: YouTube/Vimeo embed');
@@ -57,8 +84,14 @@ async function generateEmailPreview() {
                 mediaHtml = videoPreview;
             } else {
                 console.log('   Video Type: Native HTML5 video');
-                const dateStr = data.date.replace(/-/g, '').slice(2);
-                const apodUrl = `https://apod.nasa.gov/apod/ap${dateStr}.html`;
+                // Construct APOD format date: apYYMMDD.html
+                const dateObj = new Date(dateStr); // re-parse to be safe or reuse parts
+                // Note: new Date('2026-01-13') might be UTC depending on environment, but we parsed manually above.
+                // Let's reuse the manual parse for safety for the file ID.
+                const yy = String(year).slice(2);
+                const mm = String(month).padStart(2, '0');
+                const dd = String(day).padStart(2, '0');
+                const apodUrl = `https://apod.nasa.gov/apod/ap${yy}${mm}${dd}.html`;
                 console.log('   APOD URL:', apodUrl);
 
                 mediaHtml = `
@@ -151,16 +184,15 @@ async function generateEmailPreview() {
         `;
 
         // Save to file
-        const outputFile = 'email_preview.html';
+        const outputFile = `email_preview_${dateStr}.html`;
         fs.writeFileSync(outputFile, html);
-        console.log(`\n✅ Email preview saved to ${outputFile}`);
-        console.log(`   Open file://${process.cwd()}/${outputFile} to view\n`);
+        console.log(`✅ Saved to ${outputFile}`);
+        console.log(`   (file://${process.cwd()}/${outputFile})`);
 
     } catch (error) {
         console.error('❌ Error:', error.message);
         console.error(error.stack);
-        process.exit(1);
     }
 }
 
-generateEmailPreview();
+runPreviews();
