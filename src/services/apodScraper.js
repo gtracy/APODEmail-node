@@ -15,8 +15,19 @@ async function getDataByDate(dateObj) {
     console.log(`fetching ${url}`);
 
     try {
-        const response = await axios.get(url);
-        const html = response.data;
+        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        const buffer = response.data;
+
+        // Detect encoding (UTF-16LE, UTF-16BE, or default to UTF-8)
+        let html;
+        if (buffer[0] === 0xff && buffer[1] === 0xfe) {
+            html = buffer.toString('utf16le');
+        } else if (buffer[0] === 0xfe && buffer[1] === 0xff) {
+            html = buffer.toString('utf16be');
+        } else {
+            html = buffer.toString('utf8');
+        }
+
         const $ = cheerio.load(html);
         const body = $('body').text(); // For regex searches on full text if needed
 
@@ -70,6 +81,11 @@ async function getDataByDate(dateObj) {
 
         // Extract video URL from iframe/embed OR native video source tag
         let videoUrl = videoElement.attr('src') || embedElement.attr('src');
+
+        // Clean up video URL (handle protocol-relative URLs)
+        if (videoUrl && videoUrl.startsWith('//')) {
+            videoUrl = `https:${videoUrl}`;
+        }
 
         // Check for native HTML5 video tag
         if (!videoUrl && nativeVideoElement.length > 0) {

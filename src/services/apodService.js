@@ -47,23 +47,57 @@ async function fetchAPOD() {
             }
 
             if (isYouTubeEmbed || isVimeoEmbed) {
-                // Handle YouTube/Vimeo embeds (existing logic)
-                const videoIdMatch = data.url.match(/embed\/(\S+)[?]/) || data.url.match(/embed\/([^?]+)/);
-                let videoPreview = `<center><a href="${data.url}">${data.url}</a></center>`;
+                // Handle YouTube/Vimeo embeds
+                let videoId = '';
+                let imgUrl = '';
+                let videoLink = data.url;
 
-                if (videoIdMatch) {
-                    const videoId = videoIdMatch[1];
-                    const imgUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-                    videoPreview += `
-                        <br>
+                if (isYouTubeEmbed) {
+                    // Extraction from embed URL: https://www.youtube.com/embed/XXXXXX
+                    const ytMatch = data.url.match(/embed\/([^?#\s]+)/) || data.url.match(/v=([^&?#\s]+)/);
+                    if (ytMatch) {
+                        videoId = ytMatch[1];
+                        imgUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                    }
+                } else if (isVimeoEmbed) {
+                    // Extraction from Vimeo embed: https://player.vimeo.com/video/XXXXXX
+                    const vimeoMatch = data.url.match(/video\/(\d+)/);
+                    if (vimeoMatch) {
+                        videoId = vimeoMatch[1];
+                        // Vimeo thumbnails usually require an API call, but we can try a placeholder or a link
+                        // For now, let's at least provide a better link
+                    }
+                }
+
+                if (imgUrl) {
+                    mediaHtml = `
                         <center>
-                            <a href="${data.url}">
-                                <img src="${imgUrl}">
+                            <div style="position: relative; display: inline-block;">
+                                <a href="${videoLink}" style="text-decoration: none;">
+                                    <img src="${imgUrl}" alt="Watch Video" style="max-width: 100%; border-radius: 8px; display: block;">
+                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                                                background: rgba(0,0,0,0.6); border-radius: 50%; width: 60px; height: 60px; 
+                                                display: flex; align-items: center; justify-content: center;">
+                                        <span style="color: white; font-size: 30px; margin-left: 5px;">▶</span>
+                                    </div>
+                                </a>
+                            </div>
+                            <p style="margin-top: 10px;">
+                                <a href="${videoLink}" style="color: #667eea; text-decoration: none; font-weight: bold; font-family: Arial, sans-serif;">
+                                    🎬 Watch Video: ${data.title}
+                                </a>
+                            </p>
+                        </center>
+                    `;
+                } else {
+                    mediaHtml = `
+                        <center>
+                            <a href="${videoLink}" style="color: #667eea; text-decoration: none; font-weight: bold; font-family: Arial, sans-serif;">
+                                🎬 Watch on ${isYouTubeEmbed ? 'YouTube' : 'Vimeo'}: ${data.url}
                             </a>
                         </center>
-                     `;
+                    `;
                 }
-                mediaHtml = videoPreview;
             } else {
                 // Handle native HTML5 video tags
                 // Construct APOD URL from date (format: ap260113.html from 2026-01-13)

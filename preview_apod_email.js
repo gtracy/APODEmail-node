@@ -15,31 +15,43 @@
 
 const { getDataByDate } = require('./src/services/apodScraper');
 const fs = require('fs');
+const path = require('path');
+
+const PREVIEW_DIR = path.join(__dirname, 'preview-tests');
+
+// Create preview directory if it doesn't exist
+if (!fs.existsSync(PREVIEW_DIR)) {
+    fs.mkdirSync(PREVIEW_DIR, { recursive: true });
+}
 
 async function runPreviews() {
-    // 1. Fixed date (Video APOD)
-    const fixedDate = '2026-01-13';
+    // Mapping of dates to descriptive filenames
+    const previews = [
+        { date: '2026-01-13', name: 'video-tag' },
+        { date: '2013-11-30', name: 'vimeo' },
+        { date: '2022-12-04', name: 'youtube' },
+        { date: '2022-01-13', name: 'static-image' }
+    ];
 
-    // 2. Today's date
+    // Add today
     const today = new Date();
     const todayStr = today.getFullYear() + '-' +
         String(today.getMonth() + 1).padStart(2, '0') + '-' +
         String(today.getDate()).padStart(2, '0');
+    
+    previews.push({ date: todayStr, name: 'today' });
 
-    // Use a Set to avoid duplicates if today IS the fixed date
-    const targetDates = new Set([fixedDate, todayStr]);
+    console.log(`Starting preview generation in ${PREVIEW_DIR}`);
 
-    console.log(`Starting preview generation for: ${Array.from(targetDates).join(', ')}`);
-
-    for (const dateStr of targetDates) {
-        await generateEmailPreview(dateStr);
+    for (const preview of previews) {
+        await generateEmailPreview(preview.date, preview.name);
     }
 }
 
-async function generateEmailPreview(dateStr) {
+async function generateEmailPreview(dateStr, fileName) {
     try {
         console.log(`\n---------------------------------------------------------`);
-        console.log(`Generating email preview for ${dateStr}...`);
+        console.log(`Generating preview for ${dateStr} as ${fileName}.html...`);
 
         // Parse the date string
         const [year, month, day] = dateStr.split('-').map(Number);
@@ -74,20 +86,48 @@ async function generateEmailPreview(dateStr) {
 
             if (isYouTubeEmbed || isVimeoEmbed) {
                 console.log('   Video Type: YouTube/Vimeo embed');
-                const videoIdMatch = data.url.match(/embed\/(\S+)[?]/) || data.url.match(/embed\/([^?]+)/);
-                let videoPreview = `<center><a href="${data.url}">${data.url}</a></center>`;
-                if (videoIdMatch) {
-                    const videoId = videoIdMatch[1];
-                    const imgUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-                    videoPreview += `<br><center><a href="${data.url}"><img src="${imgUrl}"></a></center>`;
+                
+                if (isYouTubeEmbed) {
+                    console.log('   -> Using YouTube Mock Player for local/email compatibility');
+                    const videoIdMatch = data.url.match(/embed\/([^/?#]+)/);
+                    const videoId = videoIdMatch ? videoIdMatch[1] : '';
+                    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+                    
+                    mediaHtml = `
+                        <center>
+                            <div style="max-width: 640px; margin: 20px auto; position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                                <a href="${data.url}" style="text-decoration: none; display: block; position: relative;">
+                                    <img src="${thumbnailUrl}" style="width: 100%; display: block;" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'">
+                                    <!-- Play Button Overlay -->
+                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                                                width: 80px; height: 80px; background: rgba(0,0,0,0.6); border-radius: 50%; 
+                                                display: flex; align-items: center; justify-content: center; border: 4px solid white;">
+                                        <div style="width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; 
+                                                    border-left: 30px solid white; margin-left: 8px;"></div>
+                                    </div>
+                                </a>
+                            </div>
+                            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #666;">
+                                <a href="${data.url}" style="color: #667eea; text-decoration: none; font-weight: bold;">Watch Video on YouTube</a>
+                            </p>
+                        </center>
+                    `;
+                } else {
+                    console.log('   -> Using Vimeo Iframe');
+                    mediaHtml = `
+                        <center>
+                            <div style="max-width: 640px; margin: 20px auto;">
+                                <iframe width="100%" height="360" src="${data.url}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></iframe>
+                            </div>
+                            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #666;">
+                                Can't see the video? <a href="${data.url}" style="color: #667eea; text-decoration: none; font-weight: bold;">Watch it directly on Vimeo</a>
+                            </p>
+                        </center>
+                    `;
                 }
-                mediaHtml = videoPreview;
             } else {
                 console.log('   Video Type: Native HTML5 video');
                 // Construct APOD format date: apYYMMDD.html
-                const dateObj = new Date(dateStr); // re-parse to be safe or reuse parts
-                // Note: new Date('2026-01-13') might be UTC depending on environment, but we parsed manually above.
-                // Let's reuse the manual parse for safety for the file ID.
                 const yy = String(year).slice(2);
                 const mm = String(month).padStart(2, '0');
                 const dd = String(day).padStart(2, '0');
@@ -153,7 +193,7 @@ async function generateEmailPreview(dateStr) {
                 </center>
                 
                 ${mediaHtml}
-
+ 
                 <center>
                     <b> ${data.title} </b> <br> 
                     ${copyrightHtml}
@@ -184,10 +224,10 @@ async function generateEmailPreview(dateStr) {
         `;
 
         // Save to file
-        const outputFile = `email_preview_${dateStr}.html`;
+        const outputFile = path.join(PREVIEW_DIR, `${fileName}.html`);
         fs.writeFileSync(outputFile, html);
         console.log(`✅ Saved to ${outputFile}`);
-        console.log(`   (file://${process.cwd()}/${outputFile})`);
+        console.log(`   (file://${outputFile})`);
 
     } catch (error) {
         console.error('❌ Error:', error.message);
