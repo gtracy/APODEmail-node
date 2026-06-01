@@ -23,9 +23,9 @@
     "validator": "^13.15.26"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.17",
+    "@vitest/coverage-v8": "^4.1.8",
     "supertest": "^7.2.2",
-    "vitest": "^4.0.17"
+    "vitest": "^4.1.8"
   },
   "overrides": {
     "protobufjs": "^7.5.4"
