@@ -112,4 +112,16 @@ describe('Canonical Redirection Middleware Tests', () => {
 
         expect(response.status).not.toBe(301);
     });
+
+    it('should NOT redirect localhost, 127.0.0.1, or 0.0.0.0 even in production', async () => {
+        const testHosts = ['localhost:8080', '127.0.0.1:8080', '0.0.0.0:8080', 'localhost', '127.0.0.1', '0.0.0.0'];
+        for (const host of testHosts) {
+            const response = await request(app)
+                .get('/stats')
+                .set('Host', host)
+                .set('X-Forwarded-Proto', 'http');
+
+            expect(response.status).not.toBe(301);
+        }
+    });
 });

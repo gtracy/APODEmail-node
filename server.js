@@ -25,7 +25,14 @@ app.use((req, res, next) => {
         return next();
     }
 
-    const host = (req.hostname || '').toLowerCase();
+    const host = req.headers.host || '';
+
+    // Skip local host names during local simulation/testing
+    const isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/.test(host);
+    if (isLocal) {
+        return next();
+    }
+
     const protocol = req.protocol; // Populated correctly by Express when trust proxy is enabled
 
     const isCanonicalHost = host === 'apodemail.org';
