@@ -1,7 +1,7 @@
+require('dotenv').config();
 const express = require('express');
 const routes = require('./src/routes');
 const logger = require('./src/services/logger');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -25,14 +25,14 @@ app.use((req, res, next) => {
         return next();
     }
 
-    const host = req.headers.host;
+    const host = (req.hostname || '').toLowerCase();
     const protocol = req.protocol; // Populated correctly by Express when trust proxy is enabled
 
     const isCanonicalHost = host === 'apodemail.org';
     const isHttps = protocol === 'https';
 
     if (!isCanonicalHost || !isHttps) {
-        const canonicalUrl = `https://apodemail.org${req.originalUrl}`;
+        const canonicalUrl = `https://apodemail.org${req.originalUrl.replace(/^\/index\.html(?=\?|$)/, '/')}`;
         logger.info({
             event: 'canonical_redirect',
             originalUrl: req.originalUrl,
@@ -45,7 +45,14 @@ app.use((req, res, next) => {
 
     // Redirect /index.html to /
     if (req.path === '/index.html') {
-        const targetUrl = 'https://apodemail.org' + req.originalUrl.replace(/^\/index\.html/, '/');
+        let targetUrl = 'https://apodemail.org/';
+        try {
+            const parsedUrl = new URL(req.originalUrl, 'https://apodemail.org');
+            const normalizedPathAndQuery = (parsedUrl.pathname + parsedUrl.search).replace(/^\/index\.html/, '/');
+            targetUrl = `https://apodemail.org${normalizedPathAndQuery}`;
+        } catch (error) {
+            targetUrl = 'https://apodemail.org/';
+        }
         logger.info({
             event: 'index_redirect',
             originalUrl: req.originalUrl,
