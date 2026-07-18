@@ -21,7 +21,7 @@
     "express-rate-limit": "^8.5.1",
     "luxon": "^3.7.2",
     "pino": "^9.0.0",
-    "validator": "^13.15.26"
+    "validator": "^13.15.35"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.10",
