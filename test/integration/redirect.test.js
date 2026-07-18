@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 const request = require('supertest');
-const express = require('express');
 
 // Save original environment
 const originalNodeEnv = process.env.NODE_ENV;
