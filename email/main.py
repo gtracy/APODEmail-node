@@ -13,15 +13,28 @@ def email_queue():
     try:
         email = request.form.get('email')
         body = request.form.get('body')
+        text_body = request.form.get('text_body')
         subject = request.form.get('subject')
         bcc = request.form.get('bcc')
+        list_unsubscribe = request.form.get('list_unsubscribe')
 
         # send email using Legacy API Interface (Shimmed)
         apod_message = mail.EmailMessage()
         apod_message.subject = subject
         apod_message.sender = 'gtracy@gmail.com'
         apod_message.html = body
+        if text_body:
+            apod_message.body = text_body
         apod_message.to = email
+
+        # Anti-spam and mailing list headers (whitelisted by App Engine Mail)
+        headers = {
+            'Auto-Submitted': 'auto-generated',
+            'List-Id': '<daily.apodemail.org>'
+        }
+        if list_unsubscribe:
+            headers['List-Unsubscribe'] = list_unsubscribe
+        apod_message.headers = headers
         
         # Handle BCC if requested (legacy logic)
         if subject and subject.find('APOD Email') > -1 and bcc == 'True':

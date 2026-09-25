@@ -13,7 +13,8 @@ describe('emailService', () => {
     it('should correctly enqueue emails for all users with tracking and personalization', async () => {
         const mockApod = {
             title: 'Moon Games',
-            html: '<html><body><b>Moon Games</b><br><a href="https://example.com/more">Details</a><p>Unsubscribe <a href="https://apodemail.org?action=unsubscribe&email={{email}}">here</a></p></body></html>'
+            html: '<html><body><b>Moon Games</b><br><a href="https://example.com/more">Details</a><p>Unsubscribe <a href="https://apodemail.org/unsubscribe?email={{email}}">here</a></p></body></html>',
+            text: 'Moon Games\nDetails: https://example.com/more\nUnsubscribe: https://apodemail.org/unsubscribe?email={{email}}'
         };
 
         const mockUsers = [
@@ -40,6 +41,14 @@ describe('emailService', () => {
         const body = params.get('body');
         expect(body).toContain('user1%40example.com');
         expect(body).toContain('utm_source=newsletter');
+        // Unsubscribe link should not have UTM params
+        expect(body).not.toContain('unsubscribe?email=user1%40example.com&utm_source=');
+
+        const textBody = params.get('text_body');
+        expect(textBody).toContain('user1%40example.com');
+
+        const listUnsubscribe = params.get('list_unsubscribe');
+        expect(listUnsubscribe).toBe('<https://apodemail.org/unsubscribe?email=user1%40example.com>');
     });
 
     it('should throw error if date parameters are missing', async () => {

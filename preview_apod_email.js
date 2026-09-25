@@ -16,6 +16,7 @@
 const { getDataByDate } = require('./src/services/apodScraper');
 const fs = require('fs');
 const path = require('path');
+const cheerio = require('cheerio');
 
 const PREVIEW_DIR = path.join(__dirname, 'preview-tests');
 
@@ -211,22 +212,60 @@ async function generateEmailPreview(dateStr, fileName) {
                     </p>
                 </center>
 
-                <hr>
-                <p>
-                    <i>
-                        <strong>This is an automated email. If you notice any problems, just send me a note at <a href="mailto:gtracy@gmail.com">gtracy@gmail.com</a>. 
-                        You can add and remove email addresses to this distribution list here, <a href="https://apodemail.org">https://apodemail.org</a>.</strong>
-                    </i>
-                    <a href="https://apodemail.org?action=unsubscribe&email={{email}}">Unsubscribe</a>
-                </p>
+                <hr style="border: none; border-top: 1px solid #ccc; margin: 24px 0;">
+                <div style="font-family: Arial, sans-serif; font-size: 12px; color: #555; line-height: 1.5; text-align: center;">
+                    <p style="margin: 6px 0;">
+                        You are receiving this automated email because you subscribed to the Astronomy Picture of the Day distribution list at <a href="https://apodemail.org" style="color: #667eea;">https://apodemail.org</a>.
+                    </p>
+                    <p style="margin: 6px 0;">
+                        <a href="https://apodemail.org/unsubscribe?email={{email}}" style="color: #667eea; text-decoration: underline;">Unsubscribe</a> | 
+                        <a href="https://apodemail.org" style="color: #667eea;">Manage Subscription</a>
+                    </p>
+                    <p style="margin: 6px 0;">
+                        If you notice any problems, send a note to <a href="mailto:gtracy@gmail.com" style="color: #667eea;">gtracy@gmail.com</a>.
+                    </p>
+                    <p style="margin: 6px 0; color: #777;">
+                        APOD Email, P.O. Box 620572, Middleton, WI 53562, USA
+                    </p>
+                </div>
             </body>
             </html>
         `;
 
+        const mediaText = data.media_type === 'image'
+            ? `View Image: ${data.hdurl || data.url}`
+            : `Watch Video: ${data.url}`;
+        const copyrightText = data.copyright ? `Image Credit & Copyright: ${data.copyright}\n\n` : '';
+        const plainExplanation = cheerio.load(data.explanation || '').text().trim();
+
+        const text = `Astronomy Picture of the Day
+${data.date} - ${data.title}
+
+${mediaText}
+
+${copyrightText}Explanation:
+${plainExplanation}
+
+Archive: https://apod.nasa.gov/apod/archivepix.html
+About APOD: https://apod.nasa.gov/apod/lib/about_apod.html
+
+--------------------------------------------------
+You are receiving this automated email because you subscribed to the Astronomy Picture of the Day distribution list at https://apodemail.org.
+
+To unsubscribe, visit: https://apodemail.org/unsubscribe?email={{email}}
+Manage subscription: https://apodemail.org
+Feedback: gtracy@gmail.com
+
+APOD Email, P.O. Box 620572, Middleton, WI 53562, USA
+`;
+
         // Save to file
         const outputFile = path.join(PREVIEW_DIR, `${fileName}.html`);
         fs.writeFileSync(outputFile, html);
-        console.log(`✅ Saved to ${outputFile}`);
+        const outputTextFile = path.join(PREVIEW_DIR, `${fileName}.txt`);
+        fs.writeFileSync(outputTextFile, text);
+        console.log(`✅ Saved HTML to ${outputFile}`);
+        console.log(`✅ Saved Text to ${outputTextFile}`);
         console.log(`   (file://${outputFile})`);
 
     } catch (error) {

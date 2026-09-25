@@ -1,34 +1,32 @@
 const db = require('../database');
 const apodService = require('./apodService');
 const taskQueueService = require('./taskQueueService');
-
-// 1. Enqueue Logic (Called by Cron/Trigger)
 const cheerio = require('cheerio');
 const crypto = require('crypto');
+const logger = require('./logger');
 
 // 1. Enqueue Logic (Called by Cron/Trigger)
 async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
-    console.log("Starting enqueue process (Hybrid Mode)...");
+    logger.info({ event: 'enqueue_start', year, startMonth, endMonth }, 'Starting enqueue process (Hybrid Mode)...');
     try {
         const apodData = await apodService.fetchAPOD();
-        console.log(`Fetched APOD: ${apodData.title}`);
+        logger.info({ event: 'apod_fetched', title: apodData.title }, `Fetched APOD: ${apodData.title}`);
 
-        // Get users (filtered or all)
         // Get users (filtered by date range)
         if (!year || !startMonth || !endMonth) {
             throw new Error("Missing date parameters (year, startMonth, endMonth). Full table scan is not allowed.");
         }
 
         const users = await db.getUsersByDateRange(year, startMonth, endMonth);
-        console.log(`Found ${users.length} subscribers for range ${year}/${startMonth}-${endMonth}.`);
+        logger.info({ event: 'subscribers_found', count: users.length, year, startMonth, endMonth }, `Found ${users.length} subscribers for range ${year}/${startMonth}-${endMonth}.`);
 
         // optimize: perform cheerio parsing once
         const $ = cheerio.load(apodData.html);
 
-        // Add UTM parameters to all links
+        // Add UTM parameters to all links (excluding internal unsubscribe/preferences)
         $('a').each((i, link) => {
             const href = $(link).attr('href');
-            if (href && !href.startsWith('#') && !href.startsWith('mailto:') && !href.includes('action=unsubscribe')) {
+            if (href && !href.startsWith('#') && !href.startsWith('mailto:') && !href.includes('action=unsubscribe') && !href.includes('/unsubscribe')) {
                 try {
                     const urlObj = new URL(href);
                     urlObj.searchParams.set('utm_source', 'newsletter');
@@ -42,21 +40,22 @@ async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
         });
 
         const trackedHtmlTemplate = $.html();
+        const rawTextTemplate = apodData.text || '';
 
         let count = 0;
         for (const user of users) {
             try {
                 // Construct Form Data Body for Python App
-                // Legacy params: email, subject, body, bcc
                 const params = new URLSearchParams();
                 params.append('email', user.email);
                 params.append('subject', apodData.title);
 
-                // Personalize HTML
-                let personalizedHtml = trackedHtmlTemplate.replace('{{email}}', encodeURIComponent(user.email));
+                // Personalize HTML and plain text
+                const encodedEmail = encodeURIComponent(user.email);
+                let personalizedHtml = trackedHtmlTemplate.replace('{{email}}', encodedEmail);
+                let personalizedText = rawTextTemplate.replace('{{email}}', encodedEmail);
 
                 // Add Open Tracking Pixel (GA4 Measurement Protocol)
-                // https://www.google-analytics.com/g/collect?v=2&tid=MEASUREMENT_ID&cid=CLIENT_ID&en=email_open...
                 const clientId = crypto.randomUUID();
                 const measurementId = 'G-SRM03RK860'; // GA4 Measurement ID
                 const pixelUrl = new URL('https://www.google-analytics.com/g/collect');
@@ -72,6 +71,13 @@ async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
                 personalizedHtml += `<img src="${pixelUrl.toString()}" width="1" height="1" style="display:none;"/>`;
 
                 params.append('body', personalizedHtml);
+                if (personalizedText) {
+                    params.append('text_body', personalizedText);
+                }
+
+                // RFC 2369 / RFC 8058 compliant unsubscribe header
+                const unsubscribeUrl = `https://apodemail.org/unsubscribe?email=${encodedEmail}`;
+                params.append('list_unsubscribe', `<${unsubscribeUrl}>`);
 
                 const payload = {
                     relativeUri: '/emailqueue',
@@ -82,15 +88,15 @@ async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
                 await taskQueueService.createTask(payload);
                 count++;
             } catch (err) {
-                console.error(`Failed to enqueue email for user ${user.email}:`, err);
+                logger.error({ err, email: user.email }, `Failed to enqueue email for user ${user.email}`);
                 // Continue to next user
             }
         }
-        console.log(`Enqueued ${count} tasks to 'mailer' service.`);
+        logger.info({ event: 'tasks_enqueued', count, service: 'mailer' }, `Enqueued ${count} tasks to 'mailer' service.`);
         return count;
 
     } catch (error) {
-        console.error("Failed to enqueue emails:", error);
+        logger.error({ err: error }, 'Failed to enqueue emails');
         throw error;
     }
 }

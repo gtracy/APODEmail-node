@@ -8,6 +8,7 @@ const fs = require('fs');
 const axios = require('axios');
 const taskQueueService = require('./services/taskQueueService');
 const validator = require('validator');
+const logger = require('./services/logger');
 
 // Serve index.html
 router.get('/', (req, res) => {
@@ -94,25 +95,49 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-// Unsubscribe Endpoint
-router.get('/unsubscribe', async (req, res) => {
-    console.dir(req.query);
-    const email = req.query.email;
+// Unsubscribe Confirmation Page (GET is safe from email scanner bots)
+router.get('/unsubscribe', (req, res) => {
+    const email = req.query.email || '';
+    logger.info({ event: 'unsubscribe_page_view', email }, 'Serving unsubscribe confirmation page');
+
+    try {
+        const templatePath = path.join(__dirname, 'templates/unsubscribe.html');
+        let html = fs.readFileSync(templatePath, 'utf8');
+        html = html.replace('{{ email }}', validator.escape(email));
+        res.send(html);
+    } catch (error) {
+        logger.error({ err: error }, 'Error serving unsubscribe page');
+        res.status(500).send('Error loading unsubscribe page');
+    }
+});
+
+// Unsubscribe Action Endpoint (POST executes the unsubscription)
+router.post('/unsubscribe', async (req, res) => {
+    const email = (req.body && req.body.email) || req.query.email;
+    const notes = (req.body && req.body.notes) || req.query.notes || '';
+
+    logger.info({ event: 'unsubscribe_request', email, hasNotes: !!notes }, 'Processing unsubscribe request');
+
     if (!email) {
         return res.status(400).send('Email is required to unsubscribe');
+    }
+
+    if (!validator.isEmail(email)) {
+        return res.status(400).send('Invalid email format');
     }
 
     try {
         const deleted = await db.deleteUser(email);
         if (!deleted) {
+            logger.info({ event: 'unsubscribe_not_found', email }, 'Email not found in subscription list');
             return res.send('Email not found in subscription list.');
         }
+
         // Send Unsubscribe Confirmation Email
         try {
             const templatePath = path.join(__dirname, 'templates/removed-email.html');
             let html = fs.readFileSync(templatePath, 'utf8');
-            // Notes might be undefined, handle gracefully
-            html = html.replace('{{ notes }}', req.query.notes || '');
+            html = html.replace('{{ notes }}', validator.escape(notes));
 
             const params = new URLSearchParams();
             params.append('email', email);
@@ -125,12 +150,11 @@ router.get('/unsubscribe', async (req, res) => {
                 body: params.toString()
             };
 
-            console.log(`Attempting to enqueue unsubscribe confirmation for ${email}`);
+            logger.info({ event: 'enqueue_unsubscribe_confirmation', email }, `Attempting to enqueue unsubscribe confirmation for ${email}`);
             await taskQueueService.createTask(payload);
-            console.log(`Enqueued unsubscribe confirmation for ${email}`);
+            logger.info({ event: 'enqueued_unsubscribe_confirmation', email }, `Enqueued unsubscribe confirmation for ${email}`);
 
             // Send Admin Notification if notes are present
-            const notes = req.query.notes;
             if (notes && process.env.ADMIN_EMAIL) {
                 const adminParams = new URLSearchParams();
                 adminParams.append('email', process.env.ADMIN_EMAIL);
@@ -143,16 +167,30 @@ router.get('/unsubscribe', async (req, res) => {
                     body: adminParams.toString()
                 };
                 await taskQueueService.createTask(adminPayload);
-                console.log(`Enqueued admin notification for unsubscribe feedback from ${email}`);
+                logger.info({ event: 'enqueued_admin_feedback', email }, `Enqueued admin notification for unsubscribe feedback from ${email}`);
             }
 
         } catch (emailError) {
-            console.error('Error sending unsubscribe confirmation email:', emailError);
+            logger.error({ err: emailError, email }, 'Error sending unsubscribe confirmation email');
         }
 
-        res.send('You have been unsubscribed.');
+        const isJson = req.is('json') || (req.headers['accept'] && req.headers['accept'].includes('application/json'));
+        if (isJson) {
+            return res.send('You have been unsubscribed.');
+        }
+
+        // For browser form submissions, render confirmation page
+        try {
+            const templatePath = path.join(__dirname, 'templates/unsubscribed.html');
+            let html = fs.readFileSync(templatePath, 'utf8');
+            html = html.replace('{{ email }}', validator.escape(email));
+            return res.send(html);
+        } catch (templateErr) {
+            return res.send('You have been unsubscribed.');
+        }
+
     } catch (error) {
-        console.error(error);
+        logger.error({ err: error, email }, 'Database error during unsubscribe');
         res.status(500).send('Database error');
     }
 });

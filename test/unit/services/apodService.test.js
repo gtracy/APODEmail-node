@@ -25,6 +25,14 @@ describe('apodService', () => {
 
         expect(result.title).toBe('APOD - Test Image');
         expect(result.html).toContain('<img src="https://example.com/image.jpg"');
+        expect(result.html).toContain('https://apodemail.org/unsubscribe?email={{email}}');
+        expect(result.html).toContain('Middleton, WI 53562, USA');
+        expect(result.html).toContain('You are receiving this automated email');
+
+        expect(result.text).toBeDefined();
+        expect(result.text).toContain('Astronomy Picture of the Day');
+        expect(result.text).toContain('https://apodemail.org/unsubscribe?email={{email}}');
+        expect(result.text).toContain('Middleton, WI 53562, USA');
     });
 
     it('should correctly format HTML for a YouTube video APOD', async () => {

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsubscribe - Astronomy Picture of the Day</title>
+    <meta name="description" content="Unsubscribe from the APOD Daily Email.">
+    <link rel="shortcut icon" href="/img/favicon.png" type="image/png">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <header>
+        <div class="container">
+            <div class="nav-wrapper">
+                <nav class="nav-links">
+                    <a href="/">Home</a>
+                    <a href="https://apod.nasa.gov" target="_blank">Official APOD</a>
+                </nav>
+                <div class="social-share">
+                    <span style="font-weight: 600; font-size: 1.1rem; letter-spacing: 0.5px;">APOD Email</span>
+                </div>
+                <div class="cta"></div>
+            </div>
+        </div>
+    </header>
+
+    <main style="flex: 1; display: flex; align-items: center; padding: 40px 0;">
+        <div class="container" style="max-width: 600px;">
+            <div class="signup-card">
+                <div class="card-header" style="text-align: center;">
+                    <img src="/img/earth.jpg" alt="Earth" class="earth-img" style="width: 100px; height: 100px; margin-bottom: 20px;">
+                    <h2>Unsubscribe from Daily Email</h2>
+                </div>
+
+                <p style="color: var(--text-secondary); margin-bottom: 24px; text-align: center;">
+                    Please confirm that you want to remove your email address from the daily Astronomy Picture of the Day distribution list.
+                </p>
+
+                <form id="unsubscribe-form" action="/unsubscribe" method="POST">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" class="form-control"
+                            value="{{ email }}" placeholder="you@example.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Feedback (Optional)</label>
+                        <input type="text" id="notes" name="notes" class="form-control"
+                            placeholder="Why are you leaving?">
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="btn-primary" style="background: #e53e3e;">
+                        Confirm Unsubscribe
+                    </button>
+
+                    <div style="text-align: center; margin-top: 20px;">
+                        <a href="/" style="color: var(--text-secondary); text-decoration: underline; font-size: 0.95rem;">
+                            Cancel and keep my subscription
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="credits">
+                <p>Astronomy Picture of the Day Email - <a href="/">apodemail.org</a></p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>

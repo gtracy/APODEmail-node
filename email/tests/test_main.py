@@ -39,6 +39,30 @@ class EmailWorkerTestCase(unittest.TestCase):
         self.assertEqual(mock_message_instance.html, '<h1>Test Body</h1>')
 
     @patch('main.mail')
+    def test_email_queue_with_text_and_headers(self, mock_mail):
+        mock_message_instance = MagicMock()
+        mock_mail.EmailMessage.return_value = mock_message_instance
+
+        response = self.app.post('/emailqueue', data={
+            'email': 'test@example.com',
+            'subject': 'Test Subject',
+            'body': '<h1>Test Body</h1>',
+            'text_body': 'Test Body in plain text',
+            'list_unsubscribe': '<https://apodemail.org/unsubscribe?email=test%40example.com>',
+            'bcc': 'False'
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.decode('utf-8'), 'Email sent')
+
+        self.assertEqual(mock_message_instance.to, 'test@example.com')
+        self.assertEqual(mock_message_instance.html, '<h1>Test Body</h1>')
+        self.assertEqual(mock_message_instance.body, 'Test Body in plain text')
+        self.assertEqual(mock_message_instance.headers.get('List-Unsubscribe'), '<https://apodemail.org/unsubscribe?email=test%40example.com>')
+        self.assertEqual(mock_message_instance.headers.get('List-Id'), '<daily.apodemail.org>')
+        self.assertEqual(mock_message_instance.headers.get('Auto-Submitted'), 'auto-generated')
+
+    @patch('main.mail')
     def test_email_queue_bcc(self, mock_mail):
         mock_message_instance = MagicMock()
         mock_mail.EmailMessage.return_value = mock_message_instance

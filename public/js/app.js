@@ -105,10 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
             } else {
-                // Prepare Unsubscribe Payload (GET request as per API)
-                const params = new URLSearchParams({ email, notes });
-                response = await fetch(`/unsubscribe?${params.toString()}`, {
-                    method: 'GET'
+                // Prepare Unsubscribe Payload (POST request)
+                response = await fetch('/unsubscribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, notes })
                 });
             }
 
