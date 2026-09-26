@@ -127,11 +127,10 @@ async function generateEmailPreview(dateStr, fileName) {
                 }
             } else {
                 console.log('   Video Type: Native HTML5 video');
-                // Construct APOD format date: apYYMMDD.html
-                const yy = String(year).slice(2);
-                const mm = String(month).padStart(2, '0');
-                const dd = String(day).padStart(2, '0');
-                const apodUrl = `https://apod.nasa.gov/apod/ap${yy}${mm}${dd}.html`;
+                // Link to the new APOD home on science.nasa.gov. The new site has
+                // no date-addressable per-day URLs (apYYMMDD.html 404s there), so
+                // deep-linking to the day's page is not possible.
+                const apodUrl = 'https://science.nasa.gov/apod/';
                 console.log('   APOD URL:', apodUrl);
 
                 mediaHtml = `
@@ -184,7 +183,7 @@ async function generateEmailPreview(dateStr, fileName) {
                 <center>
                     <h1> Astronomy Picture of the Day </h1>
                     <p>
-                        <a href="https://apod.nasa.gov/apod/archivepix.html">Discover the cosmos!</a>
+                        <a href="https://science.nasa.gov/apod/archive">Discover the cosmos!</a>
                         Each day a different image or photograph of our fascinating universe is featured, along with a brief explanation written by a professional astronomer.
                     </p>
                     <p>
@@ -206,8 +205,8 @@ async function generateEmailPreview(dateStr, fileName) {
                 
                 <center>
                     <p>
-                        <a href="https://apod.nasa.gov/apod/archivepix.html">Archive</a> | 
-                        <a href="https://apod.nasa.gov/apod/lib/about_apod.html">About APOD</a>
+                        <a href="https://science.nasa.gov/apod/archive">Archive</a> | 
+                        <a href="https://science.nasa.gov/apod/apod-about/">About APOD</a>
                     </p>
                 </center>
 
