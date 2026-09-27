@@ -8,4 +8,4 @@ env_variables:
   NODE_ENV: production
   RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY}
   ADMIN_EMAIL: ${ADMIN_EMAIL}
-  PHYSICAL_MAILING_ADDRESS: "APOD Email, P.O. Box 620572, Middleton, WI 53562, USA"
+  PHYSICAL_MAILING_ADDRESS: "NASA Goddard Space Flight Center\nAstrophysics Science Division, Code 660\n8800 Greenbelt Road\nGreenbelt, MD 20771"

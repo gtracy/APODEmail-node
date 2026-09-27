@@ -225,7 +225,10 @@ async function generateEmailPreview(dateStr, fileName) {
                         If you notice any problems, send a note to <a href="mailto:gtracy@gmail.com" style="color: #667eea;">gtracy@gmail.com</a>.
                     </p>
                     <p style="margin: 6px 0; color: #777;">
-                        APOD Email, P.O. Box 620572, Middleton, WI 53562, USA
+                        NASA Goddard Space Flight Center<br>
+                        Astrophysics Science Division, Code 660<br>
+                        8800 Greenbelt Road<br>
+                        Greenbelt, MD 20771
                     </p>
                 </div>
             </body>
@@ -256,7 +259,10 @@ To unsubscribe, visit: https://apodemail.org/unsubscribe?email={{email}}
 Manage subscription: https://apodemail.org
 Feedback: gtracy@gmail.com
 
-APOD Email, P.O. Box 620572, Middleton, WI 53562, USA
+NASA Goddard Space Flight Center
+Astrophysics Science Division, Code 660
+8800 Greenbelt Road
+Greenbelt, MD 20771
 `;
 
         // Save to file

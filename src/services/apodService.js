@@ -2,7 +2,10 @@ const apodScraper = require('./apodScraper');
 const logger = require('./logger');
 const cheerio = require('cheerio');
 
-const DEFAULT_PHYSICAL_ADDRESS = 'APOD Email, P.O. Box 620572, Middleton, WI 53562, USA';
+const DEFAULT_PHYSICAL_ADDRESS = `NASA Goddard Space Flight Center
+Astrophysics Science Division, Code 660
+8800 Greenbelt Road
+Greenbelt, MD 20771`;
 
 async function fetchAPOD() {
     try {
@@ -139,6 +142,10 @@ async function fetchAPOD() {
 
         const copyrightHtml = data.copyright ? `<b>Image Credit & Copyright:</b> ${data.copyright}` : '';
 
+        const rawAddress = (process.env.PHYSICAL_MAILING_ADDRESS || DEFAULT_PHYSICAL_ADDRESS).replace(/\\n/g, '\n');
+        const physicalAddressHtml = rawAddress.replace(/\n/g, '<br>');
+        const physicalAddress = rawAddress;
+
         const html = `
             <!DOCTYPE html>
             <html>
@@ -183,14 +190,13 @@ async function fetchAPOD() {
                         If you notice any problems, send a note to <a href="mailto:gtracy@gmail.com" style="color: #667eea;">gtracy@gmail.com</a>.
                     </p>
                     <p style="margin: 6px 0; color: #777;">
-                        ${process.env.PHYSICAL_MAILING_ADDRESS || DEFAULT_PHYSICAL_ADDRESS}
+                        ${physicalAddressHtml}
                     </p>
                 </div>
             </body>
             </html>
         `;
 
-        const physicalAddress = process.env.PHYSICAL_MAILING_ADDRESS || DEFAULT_PHYSICAL_ADDRESS;
         const mediaText = data.media_type === 'image'
             ? `View Image: ${data.hdurl || data.url}`
             : `Watch Video: ${data.url}`;
