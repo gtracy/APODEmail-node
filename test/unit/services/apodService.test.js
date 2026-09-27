@@ -68,4 +68,48 @@ describe('apodService', () => {
         expect(result.title).toBe('APOD - Test Native Video');
         expect(result.html).toContain('Today\'s APOD is a Video!');
     });
+
+    it('links the image to the APOD page, not the raw image file (#51)', async () => {
+        const mockData = {
+            title: 'Test Image',
+            explanation: 'This is a test image explanation.',
+            date: '2023-11-29',
+            url: 'https://example.com/image.jpg',
+            hdurl: 'https://example.com/hdimage.jpg',
+            media_type: 'image'
+        };
+
+        vi.spyOn(apodScraper, 'getDataByDate').mockResolvedValue(mockData);
+
+        const result = await apodService.fetchAPOD();
+
+        // The anchor must point at the APOD page (direct image-file links 403).
+        expect(result.html).toContain('<a href="https://science.nasa.gov/apod/">');
+        expect(result.html).not.toContain('example.com/hdimage.jpg');
+        expect(result.text).toContain('View Image: https://science.nasa.gov/apod/');
+    });
+
+    it('uses only absolute hrefs in the generated email HTML (#51)', async () => {
+        const mockData = {
+            title: 'Test Image',
+            explanation: 'This is a test image explanation.',
+            date: '2023-11-29',
+            url: 'https://example.com/image.jpg',
+            // hdurl missing entirely: must not produce <a href="undefined">
+            media_type: 'image'
+        };
+
+        vi.spyOn(apodScraper, 'getDataByDate').mockResolvedValue(mockData);
+
+        const result = await apodService.fetchAPOD();
+
+        const hrefs = [...result.html.matchAll(/href="([^"]*)"/g)].map(m => m[1]);
+        expect(hrefs.length).toBeGreaterThan(0);
+        for (const href of hrefs) {
+            expect(href).not.toBe('undefined');
+            // mailto: and https: are both absolute; anything else (relative)
+            // would break email clients and the UTM pass in emailService.
+            expect(href).toMatch(/^(https?|mailto):/);
+        }
+    });
 });

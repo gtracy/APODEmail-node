@@ -7,6 +7,14 @@ Astrophysics Science Division, Code 660
 8800 Greenbelt Road
 Greenbelt, MD 20771`;
 
+// Canonical APOD home. The new site has no date-addressable per-day URLs
+// (apYYMMDD.html 404s there), so deep-linking to a specific day's page is not
+// possible — link to the APOD home instead. Shared by the image and video
+// paths so the migration target lives in exactly one place (#47, #51).
+function apodPageUrl() {
+    return 'https://science.nasa.gov/apod/';
+}
+
 async function fetchAPOD() {
     try {
         const data = await apodScraper.getDataByDate(new Date());
@@ -27,9 +35,11 @@ async function fetchAPOD() {
         // Construct HTML manually
         let mediaHtml = '';
         if (data.media_type === 'image') {
+            // Link to the APOD home page, not the raw image file: APOD blocks
+            // direct image-file access (403), so an image-file link is unusable (#51).
             mediaHtml = `
                 <center>
-                    <a href="${data.hdurl || data.url}">
+                    <a href="${apodPageUrl()}">
                         <img src="${data.url}" alt="${data.title}" style="max-width:100%">
                     </a>
                 </center>
@@ -110,7 +120,7 @@ async function fetchAPOD() {
                 // Link to the new APOD home on science.nasa.gov. The new site has
                 // no date-addressable per-day URLs (apYYMMDD.html 404s there), so
                 // deep-linking to the day's page is not possible.
-                const apodUrl = 'https://science.nasa.gov/apod/';
+                const apodUrl = apodPageUrl();
 
                 mediaHtml = `
                     <center style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -199,7 +209,7 @@ async function fetchAPOD() {
         `;
 
         const mediaText = data.media_type === 'image'
-            ? `View Image: ${data.hdurl || data.url}`
+            ? `View Image: ${apodPageUrl()}`
             : `Watch Video: ${data.url}`;
         const copyrightText = data.copyright ? `Image Credit & Copyright: ${data.copyright}\n\n` : '';
         const plainExplanation = cheerio.load(data.explanation || '').text().trim();
