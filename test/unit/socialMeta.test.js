@@ -49,4 +49,24 @@ describe('Social Metadata & Assets (Issue #49)', () => {
         expect($('meta[property="og:image:height"]').attr('content')).toBe('628');
         expect($('meta[property="og:image:alt"]').attr('content')).toBeTruthy();
     });
+
+    it('should have Twitter share link with UTM parameters in index.html', () => {
+        const html = fs.readFileSync(indexPath, 'utf-8');
+        const $ = cheerio.load(html);
+        const twitterShareHref = $('a[title="Share on X"]').attr('href');
+
+        expect(twitterShareHref).toContain('https://twitter.com/intent/tweet');
+        expect(twitterShareHref).toContain('utm_source%3Dtwitter');
+        expect(twitterShareHref).toContain('utm_medium%3Dsocial');
+    });
+
+    it('should have Twitter share link with UTM parameters in visualization.html', () => {
+        const html = fs.readFileSync(statsPath, 'utf-8');
+        const $ = cheerio.load(html);
+        const twitterShareHref = $('a[title="Share on X"]').attr('href');
+
+        expect(twitterShareHref).toContain('https://twitter.com/intent/tweet');
+        expect(twitterShareHref).toContain('utm_source%3Dtwitter');
+        expect(twitterShareHref).toContain('utm_medium%3Dsocial');
+    });
 });
