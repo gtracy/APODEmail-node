@@ -107,9 +107,10 @@ async function fetchAPOD() {
                 }
             } else {
                 // Handle native HTML5 video tags
-                // Construct APOD URL from date (format: ap260113.html from 2026-01-13)
-                const dateStr = data.date.replace(/-/g, '').slice(2); // "2026-01-13" -> "260113"
-                const apodUrl = `https://apod.nasa.gov/apod/ap${dateStr}.html`;
+                // Link to the new APOD home on science.nasa.gov. The new site has
+                // no date-addressable per-day URLs (apYYMMDD.html 404s there), so
+                // deep-linking to the day's page is not possible.
+                const apodUrl = 'https://science.nasa.gov/apod/';
 
                 mediaHtml = `
                     <center style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -172,8 +173,8 @@ async function fetchAPOD() {
                 
                 <center>
                     <p>
-                        <a href="https://apod.nasa.gov/apod/archivepix.html">Archive</a> | 
-                        <a href="https://apod.nasa.gov/apod/lib/about_apod.html">About APOD</a>
+                        <a href="https://science.nasa.gov/apod/archive">Archive</a> | 
+                        <a href="https://science.nasa.gov/apod/apod-about/">About APOD</a>
                     </p>
                 </center>
 
