@@ -68,4 +68,21 @@ describe('apodService', () => {
         expect(result.title).toBe('APOD - Test Native Video');
         expect(result.html).toContain('Today\'s APOD is a Video!');
     });
+
+    it('does not render the video banner for a misclassified entry with a bogus video URL', async () => {
+        const mockData = {
+            title: 'Test Misclassified',
+            explanation: 'This was flagged video by a survey iframe.',
+            date: '2026-10-01',
+            url: 'https://survey.example.com/embed/widget123',
+            media_type: 'video'
+        };
+
+        vi.spyOn(apodScraper, 'getDataByDate').mockResolvedValue(mockData);
+
+        const result = await apodService.fetchAPOD();
+
+        expect(result.html).not.toContain('Today\'s APOD is a Video!');
+        expect(result.html).toContain('View today\'s Astronomy Picture of the Day on NASA APOD');
+    });
 });
