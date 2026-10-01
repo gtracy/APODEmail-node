@@ -112,6 +112,23 @@ async function fetchAPOD() {
                 // deep-linking to the day's page is not possible.
                 const apodUrl = 'https://science.nasa.gov/apod/';
 
+                // Guard: only claim "Today's APOD is a Video!" when the URL is a
+                // valid, verified video source. A misclassified entry (e.g. a
+                // survey iframe scraped as a video URL) must not swallow the
+                // email with a false-positive video card — fall back to a
+                // neutral link to the APOD page instead.
+                if (!apodScraper.isKnownVideoSource || !apodScraper.isKnownVideoSource(data.url)) {
+                    mediaHtml = `
+                        <center>
+                            <p style="font-family: Arial, sans-serif; font-size: 16px;">
+                                <a href="${apodUrl}" style="color: #667eea; text-decoration: none; font-weight: bold;">
+                                    View today's Astronomy Picture of the Day on NASA APOD
+                                </a>
+                            </p>
+                        </center>
+                    `;
+                } else {
+
                 mediaHtml = `
                     <center style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                                    padding: 30px 20px; 
@@ -138,6 +155,7 @@ async function fetchAPOD() {
                         </a>
                     </center>
                 `;
+                }
             }
         }
 
