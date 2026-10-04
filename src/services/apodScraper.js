@@ -80,6 +80,65 @@ function findImageElement($) {
 }
 
 /**
+ * Parses the current science.nasa.gov/apod layout. apod.nasa.gov now
+ * 301-redirects (for every apYYMMDD.html URL) to https://science.nasa.gov/apod/,
+ * which embeds today's APOD in a ".smd-embed-post__article" block. Returns
+ * null when that block is absent so the caller can fall back to the legacy
+ * apod.nasa.gov parser.
+ */
+function parseScienceNasaLayout($) {
+    // The /apod/ landing page wraps the hero in an embed article (with an
+    // extra "Astronomy Picture of the Day" h1); per-day article pages use the
+    // bare hero block with the title as its h1.
+    const embed = $('.smd-embed-post__article').first();
+    const root = embed.length ? embed : $('.hds-media-detail-hero').first();
+    const media = root.find('.media-detail-hero__media').first();
+    const desc = root.find('.media-detail-hero__description').first();
+    if (!root.length || !media.length || !desc.length) return null;
+
+    const title = (embed.length ? root.find('h2') : root.find('h1')).first().text().trim();
+
+    // Explanation: drop the "Explanation:" label and the trailing
+    // "Your Sky Surprise / Tomorrow's picture" boilerplate.
+    let explanation = (desc.html() || '')
+        .replace(/<br\s*\/?>\s*<br\s*\/?>\s*<strong>\s*Your Sky Surprise[\s\S]*$/i, '')
+        .replace(/^\s*<strong>\s*Explanation:\s*<\/strong>\s*/i, '')
+        .trim();
+    explanation = explanation
+        .replace(/href="\/(?!\/)/g, 'href="https://science.nasa.gov/')
+        // bare relative archive links (ap120209.html) -> absolute
+        .replace(/href="(?!https?:|mailto:|\/|#)/gi, 'href="https://apod.nasa.gov/apod/');
+
+    // Meta table rows: Date / Credit & Copyright / ...
+    const meta = {};
+    root.find('.media-detail-hero__meta-row').each((_, row) => {
+        const key = $(row).find('th').text().trim().toLowerCase();
+        meta[key.startsWith('credit') ? 'credit' : key] = $(row).find('td').text().replace(/\s+/g, ' ').trim();
+    });
+    const parsedDate = meta['date'] ? DateTime.fromFormat(meta['date'], 'LLLL d, yyyy') : null;
+
+    const imageUrl = absolutizeApodUrl(media.find('img').first().attr('src'))
+        || absolutizeApodUrl($('meta[property="og:image"]').attr('content'));
+
+    const rawVideo = media.find('iframe').first().attr('src')
+        || media.find('video source').first().attr('src')
+        || media.find('video').first().attr('src')
+        || media.find('embed').first().attr('src');
+    const videoUrl = rawVideo && isKnownVideoSource(absolutizeApodUrl(rawVideo))
+        ? absolutizeApodUrl(rawVideo)
+        : undefined;
+
+    return {
+        title,
+        explanation,
+        date: parsedDate && parsedDate.isValid ? parsedDate.toISODate() : undefined,
+        imageUrl,
+        videoUrl,
+        copyright: meta['credit'] || undefined
+    };
+}
+
+/**
  * Fetches and parses APOD data for a specific date.
  * @param {Date|string} dateObj - The date to fetch.
  * @returns {Promise<Object>} The APOD data object.
@@ -92,6 +151,7 @@ async function getDataByDate(dateObj) {
     console.log(`fetching ${url}`);
 
     try {
+        // apod.nasa.gov redirects to science.nasa.gov/apod/ (axios follows it)
         const response = await axios.get(url, { responseType: 'arraybuffer' });
         const buffer = response.data;
 
@@ -106,6 +166,22 @@ async function getDataByDate(dateObj) {
         }
 
         const $ = cheerio.load(html);
+
+        const modern = parseScienceNasaLayout($);
+        if (modern) {
+            const media_type = modern.videoUrl ? 'video' : (modern.imageUrl ? 'image' : 'other');
+            return {
+                title: modern.title,
+                explanation: modern.explanation,
+                date: modern.date || date.toISODate(),
+                hdurl: media_type === 'video' ? modern.videoUrl : modern.imageUrl,
+                url: media_type === 'video' ? modern.videoUrl : modern.imageUrl,
+                media_type,
+                copyright: modern.copyright,
+                service_version: 'v1'
+            };
+        }
+
         const body = $('body').text(); // For regex searches on full text if needed
 
         // Title extraction logic based on reference
