@@ -136,3 +136,54 @@ describe('absolutizeApodUrl', () => {
         expect(absolutizeApodUrl(null)).toBeUndefined();
     });
 });
+
+describe('apodScraper science.nasa.gov layout', () => {
+    it('parses the redirected science.nasa.gov/apod page (image day)', async () => {
+        const fs = require('fs');
+        const path = require('path');
+        mockPage(fs.readFileSync(path.join(__dirname, '../../fixtures/science-nasa-apod.html'), 'utf8'));
+
+        const data = await getDataByDate(new Date('2026-10-04'));
+
+        expect(data.media_type).toBe('image');
+        expect(data.title).toBe('Supernumerary Rainbows over New Jersey');
+        expect(data.date).toBe('2026-10-04');
+        expect(data.url).toContain('SupernumeraryRainbows_Entwistle_1362.jpg');
+        expect(data.copyright).toBe('John Entwistle');
+        expect(data.explanation).toMatch(/^Yes, but can your rainbow do this\?/);
+        expect(data.explanation).not.toMatch(/Your Sky Surprise|Tomorrow/);
+    });
+});
+
+describe('apodScraper science.nasa.gov layout (video day)', () => {
+    it('classifies a native mp4 hero as video', async () => {
+        const fs = require('fs');
+        const path = require('path');
+        mockPage(fs.readFileSync(path.join(__dirname, '../../fixtures/science-nasa-apod-video.html'), 'utf8'));
+
+        const data = await getDataByDate(new Date('2026-07-26'));
+
+        expect(data.media_type).toBe('video');
+        expect(data.title).toBe('Simulation TNG50: A Galaxy Cluster Forms');
+        expect(data.date).toBe('2026-07-26');
+        expect(data.url).toMatch(/ClusterFormation_TNG50\.mp4$/);
+        expect(data.copyright).toMatch(/IllustrisTNG/);
+    });
+});
+
+describe('apodScraper science.nasa.gov layout (video day, caption explanation)', () => {
+    it('parses an mp4 video with explanation in the caption and absolutizes relative links', async () => {
+        const fs = require('fs');
+        const path = require('path');
+        mockPage(fs.readFileSync(path.join(__dirname, '../../fixtures/science-nasa-apod-video2.html'), 'utf8'));
+
+        const data = await getDataByDate(new Date('2026-07-13'));
+
+        expect(data.media_type).toBe('video');
+        expect(data.title).toBe('Auroras from Space');
+        expect(data.url).toMatch(/Auroras_Esa\.mp4$/);
+        expect(data.explanation).toMatch(/^What do auroras look like from above\?/);
+        expect(data.explanation).toContain('href="https://apod.nasa.gov/apod/ap120209.html"');
+        expect(data.explanation).not.toMatch(/href="ap\d/);
+    });
+});
