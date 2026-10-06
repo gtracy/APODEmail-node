@@ -31,7 +31,7 @@ jobs:
         run: |
           RAW_TAG='${{ inputs.tag || github.ref_name }}'
           # Strip a leading refs/tags/ prefix if the user pasted a full ref
-          RAW_TAG='${RAW_TAG#refs/tags/}'
+          RAW_TAG="${RAW_TAG#refs/tags/}"
           # Lowercase -> Replace separators with hyphens -> Remove illegal chars
           CLEAN_VER=$(echo "$RAW_TAG" | tr '[:upper:]' '[:lower:]' | sed 's/[\._ ]/-/g' | sed 's/[^a-z0-9-]//g')
           echo "version=$CLEAN_VER" >> $GITHUB_OUTPUT
