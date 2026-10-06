@@ -207,6 +207,30 @@ router.get('/usercount', async (req, res) => {
     }
 });
 
+// Admin APOD Email Test Endpoint (Protected by GAE Cron header)
+router.get('/dailyemail/test', async (req, res) => {
+    // Only allow invocations from App Engine Cron / Cloud Scheduler
+    if (!req.get('X-AppEngine-Cron')) {
+        return res.status(403).send('Forbidden');
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail || !validator.isEmail(adminEmail)) {
+        logger.warn({ event: 'admin_test_email_missing_config' }, 'ADMIN_EMAIL not configured or invalid');
+        return res.status(404).send('Not found: ADMIN_EMAIL not configured');
+    }
+
+    logger.info({ event: 'admin_test_email_trigger', recipient: adminEmail }, 'Triggering admin test APOD email');
+
+    try {
+        const count = await emailService.enqueueEmails(null, null, null, null, { recipients: [adminEmail] });
+        res.send(`Enqueued ${count} test task.`);
+    } catch (error) {
+        logger.error({ err: error }, 'Failed to enqueue admin test email');
+        res.status(500).send('Error enqueuing test email');
+    }
+});
+
 // Cron Trigger Endpoint (Legacy: /dailyemail/year/startMonth/endMonth)
 router.get('/dailyemail/:year/:startMonth/:endMonth', async (req, res) => {
     // Verify it's a cron request (GAE adds this header)

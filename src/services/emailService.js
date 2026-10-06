@@ -6,19 +6,26 @@ const crypto = require('crypto');
 const logger = require('./logger');
 
 // 1. Enqueue Logic (Called by Cron/Trigger)
-async function enqueueEmails(workerUrlBase, year, startMonth, endMonth) {
-    logger.info({ event: 'enqueue_start', year, startMonth, endMonth }, 'Starting enqueue process (Hybrid Mode)...');
+async function enqueueEmails(workerUrlBase, year, startMonth, endMonth, options = {}) {
+    const isTestMode = options && Array.isArray(options.recipients) && options.recipients.length > 0;
+    logger.info({ event: 'enqueue_start', year, startMonth, endMonth, testMode: isTestMode }, 'Starting enqueue process (Hybrid Mode)...');
     try {
         const apodData = await apodService.fetchAPOD();
         logger.info({ event: 'apod_fetched', title: apodData.title }, `Fetched APOD: ${apodData.title}`);
 
-        // Get users (filtered by date range)
-        if (!year || !startMonth || !endMonth) {
-            throw new Error("Missing date parameters (year, startMonth, endMonth). Full table scan is not allowed.");
-        }
+        let users;
+        if (isTestMode) {
+            users = options.recipients.map(email => ({ email }));
+            logger.info({ event: 'test_recipients_configured', count: users.length }, `Using explicit test recipients (${users.length}) instead of querying database.`);
+        } else {
+            // Get users (filtered by date range)
+            if (!year || !startMonth || !endMonth) {
+                throw new Error("Missing date parameters (year, startMonth, endMonth). Full table scan is not allowed.");
+            }
 
-        const users = await db.getUsersByDateRange(year, startMonth, endMonth);
-        logger.info({ event: 'subscribers_found', count: users.length, year, startMonth, endMonth }, `Found ${users.length} subscribers for range ${year}/${startMonth}-${endMonth}.`);
+            users = await db.getUsersByDateRange(year, startMonth, endMonth);
+            logger.info({ event: 'subscribers_found', count: users.length, year, startMonth, endMonth }, `Found ${users.length} subscribers for range ${year}/${startMonth}-${endMonth}.`);
+        }
 
         // optimize: perform cheerio parsing once
         const $ = cheerio.load(apodData.html);

@@ -2,7 +2,7 @@
 
 Goal: be able to send exactly one real APOD email, to the admin only, from production, to check how it renders in an inbox. Chosen approach: cron-style route triggered from `gcloud`, not a public endpoint.
 
-**Status: not implemented.** The edit was blocked by the auto-mode classifier in the session where this was researched. Nothing below has been applied.
+**Status: Implemented.** Protected endpoint `GET /dailyemail/test` and `emailService.enqueueEmails(..., { recipients: [adminEmail] })` are active.
 
 ## What exists today
 

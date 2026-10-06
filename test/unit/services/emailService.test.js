@@ -51,7 +51,34 @@ describe('emailService', () => {
         expect(listUnsubscribe).toBe('<https://apodemail.org/unsubscribe?email=user1%40example.com>');
     });
 
-    it('should throw error if date parameters are missing', async () => {
+    it('should correctly enqueue emails for explicit recipients without querying database', async () => {
+        const mockApod = {
+            title: 'Solar Eclipse',
+            html: '<html><body><b>Solar Eclipse</b><br><a href="https://example.com/info">Info</a><p>Unsubscribe <a href="https://apodemail.org/unsubscribe?email={{email}}">here</a></p></body></html>',
+            text: 'Solar Eclipse\nInfo: https://example.com/info\nUnsubscribe: https://apodemail.org/unsubscribe?email={{email}}'
+        };
+
+        vi.spyOn(apodService, 'fetchAPOD').mockResolvedValue(mockApod);
+        const dbSpy = vi.spyOn(db, 'getUsersByDateRange');
+        const createTaskSpy = vi.spyOn(taskQueueService, 'createTask').mockResolvedValue({ name: 'mock-task' });
+
+        const count = await emailService.enqueueEmails(null, null, null, null, { recipients: ['admin@example.com'] });
+
+        expect(count).toBe(1);
+        expect(dbSpy).not.toHaveBeenCalled();
+        expect(createTaskSpy).toHaveBeenCalledTimes(1);
+
+        const firstCall = createTaskSpy.mock.calls[0][0];
+        expect(firstCall.service).toBe('mailer');
+
+        const params = new URLSearchParams(firstCall.body);
+        expect(params.get('email')).toBe('admin@example.com');
+        expect(params.get('body')).toContain('admin%40example.com');
+        expect(params.get('body')).toContain('utm_source=newsletter');
+        expect(params.get('list_unsubscribe')).toBe('<https://apodemail.org/unsubscribe?email=admin%40example.com>');
+    });
+
+    it('should throw error if date parameters are missing when not in test mode', async () => {
         await expect(emailService.enqueueEmails('http://localhost')).rejects.toThrow('Missing date parameters');
     });
 });

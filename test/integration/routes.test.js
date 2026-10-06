@@ -49,6 +49,85 @@ describe('Route Integration Tests', () => {
         });
     });
 
+    describe('GET /dailyemail/test', () => {
+        it('should return 403 Forbidden if X-AppEngine-Cron header is missing', async () => {
+            process.env.ADMIN_EMAIL = 'admin@example.com';
+            const enqueueSpy = vi.spyOn(emailService, 'enqueueEmails');
+
+            const response = await request(app).get('/dailyemail/test');
+
+            expect(response.status).toBe(403);
+            expect(response.text).toBe('Forbidden');
+            expect(enqueueSpy).not.toHaveBeenCalled();
+        });
+
+        it('should return 404 Not Found if ADMIN_EMAIL is not set or invalid', async () => {
+            const originalAdmin = process.env.ADMIN_EMAIL;
+            delete process.env.ADMIN_EMAIL;
+
+            const response = await request(app)
+                .get('/dailyemail/test')
+                .set('X-AppEngine-Cron', 'true');
+
+            expect(response.status).toBe(404);
+            expect(response.text).toContain('ADMIN_EMAIL not configured');
+
+            process.env.ADMIN_EMAIL = 'not-an-email';
+            const response2 = await request(app)
+                .get('/dailyemail/test')
+                .set('X-AppEngine-Cron', 'true');
+
+            expect(response2.status).toBe(404);
+
+            if (originalAdmin) {
+                process.env.ADMIN_EMAIL = originalAdmin;
+            } else {
+                delete process.env.ADMIN_EMAIL;
+            }
+        });
+
+        it('should trigger enqueueEmails with ADMIN_EMAIL and return 200', async () => {
+            process.env.ADMIN_EMAIL = 'admin@example.com';
+            const enqueueSpy = vi.spyOn(emailService, 'enqueueEmails').mockResolvedValue(1);
+
+            const response = await request(app)
+                .get('/dailyemail/test')
+                .set('X-AppEngine-Cron', 'true');
+
+            expect(response.status).toBe(200);
+            expect(response.text).toBe('Enqueued 1 test task.');
+            expect(enqueueSpy).toHaveBeenCalledWith(null, null, null, null, {
+                recipients: ['admin@example.com']
+            });
+        });
+
+        it('should ignore query params and only use ADMIN_EMAIL', async () => {
+            process.env.ADMIN_EMAIL = 'admin@example.com';
+            const enqueueSpy = vi.spyOn(emailService, 'enqueueEmails').mockResolvedValue(1);
+
+            const response = await request(app)
+                .get('/dailyemail/test?email=attacker@evil.com')
+                .set('X-AppEngine-Cron', 'true');
+
+            expect(response.status).toBe(200);
+            expect(enqueueSpy).toHaveBeenCalledWith(null, null, null, null, {
+                recipients: ['admin@example.com']
+            });
+        });
+
+        it('should return 500 if enqueueEmails throws error', async () => {
+            process.env.ADMIN_EMAIL = 'admin@example.com';
+            vi.spyOn(emailService, 'enqueueEmails').mockRejectedValue(new Error('Cloud Tasks error'));
+
+            const response = await request(app)
+                .get('/dailyemail/test')
+                .set('X-AppEngine-Cron', 'true');
+
+            expect(response.status).toBe(500);
+            expect(response.text).toBe('Error enqueuing test email');
+        });
+    });
+
     describe('GET /stats', () => {
         it('should return fallback message if no stats exist', async () => {
             vi.spyOn(statsService, 'getCachedStats').mockResolvedValue(null);
