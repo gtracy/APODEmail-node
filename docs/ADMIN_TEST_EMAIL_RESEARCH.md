@@ -41,15 +41,17 @@ An unauthenticated or token-in-URL route that sends mail in production is an att
 ## Triggering from gcloud
 
 `curl` will not work because the cron header cannot be forged from outside. Options:
-- **Cloud Scheduler job with an App Engine HTTP target** pointed at `/dailyemail/test`, left paused, then run on demand:
+- **Cloud Scheduler job with an App Engine HTTP target** pointed at `/dailyemail/test`:
+  GCP requires `Job.state must be ENABLED for RunJob` (`gcloud scheduler jobs run` / Console "Force run" fails if paused). To prevent automatic execution, schedule it on leap day (`0 0 29 2 *` — runs only once every 4 years on Feb 29):
   ```bash
   gcloud scheduler jobs create app-engine apod-admin-test \
-    --schedule="0 0 1 1 *" --relative-url="/dailyemail/test" --http-method=GET \
-    --service=default --location=<region>
-  gcloud scheduler jobs pause apod-admin-test
-  gcloud scheduler jobs run apod-admin-test
+    --schedule="0 0 29 2 *" --relative-url="/dailyemail/test" --http-method=GET \
+    --service=default --location=us-central1 \
+    --description="On-demand trigger for test APOD email to ADMIN_EMAIL"
+  
+  # Trigger on demand anytime:
+  gcloud scheduler jobs run apod-admin-test --location=us-central1
   ```
-  (Verify the flags against the current `gcloud scheduler jobs create app-engine` docs and the project's region/service name before relying on this.)
 - Or add a `/dailyemail/test` entry to `cron.yaml` and run it from the App Engine cron console. This is simpler, but `cron.yaml` entries are scheduled, so pick a rarely-hit schedule.
 
 ## Alternative with no production code change
