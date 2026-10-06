@@ -16,9 +16,10 @@ app.use((req, res, next) => {
         return next();
     }
 
-    // Skip GAE internal requests (Cron, Task Queues)
+    // Skip GAE internal requests (Cron, Task Queues, Cloud Scheduler)
     if (
         req.headers['x-appengine-cron'] ||
+        req.headers['x-cloudscheduler'] ||
         req.headers['x-appengine-taskname'] ||
         req.headers['x-appengine-queuename']
     ) {

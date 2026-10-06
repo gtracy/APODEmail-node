@@ -207,10 +207,11 @@ router.get('/usercount', async (req, res) => {
     }
 });
 
-// Admin APOD Email Test Endpoint (Protected by GAE Cron header)
+// Admin APOD Email Test Endpoint (Protected by GAE Cron or Cloud Scheduler header)
 router.get('/dailyemail/test', async (req, res) => {
-    // Only allow invocations from App Engine Cron / Cloud Scheduler
-    if (!req.get('X-AppEngine-Cron')) {
+    // Only allow invocations from App Engine Cron or Cloud Scheduler
+    const isCron = req.get('X-AppEngine-Cron') || req.get('X-CloudScheduler');
+    if (!isCron) {
         return res.status(403).send('Forbidden');
     }
 

@@ -86,13 +86,28 @@ describe('Route Integration Tests', () => {
             }
         });
 
-        it('should trigger enqueueEmails with ADMIN_EMAIL and return 200', async () => {
+        it('should trigger enqueueEmails with ADMIN_EMAIL when X-AppEngine-Cron is present and return 200', async () => {
             process.env.ADMIN_EMAIL = 'admin@example.com';
             const enqueueSpy = vi.spyOn(emailService, 'enqueueEmails').mockResolvedValue(1);
 
             const response = await request(app)
                 .get('/dailyemail/test')
                 .set('X-AppEngine-Cron', 'true');
+
+            expect(response.status).toBe(200);
+            expect(response.text).toBe('Enqueued 1 test task.');
+            expect(enqueueSpy).toHaveBeenCalledWith(null, null, null, null, {
+                recipients: ['admin@example.com']
+            });
+        });
+
+        it('should trigger enqueueEmails with ADMIN_EMAIL when X-CloudScheduler is present and return 200', async () => {
+            process.env.ADMIN_EMAIL = 'admin@example.com';
+            const enqueueSpy = vi.spyOn(emailService, 'enqueueEmails').mockResolvedValue(1);
+
+            const response = await request(app)
+                .get('/dailyemail/test')
+                .set('X-CloudScheduler', 'true');
 
             expect(response.status).toBe(200);
             expect(response.text).toBe('Enqueued 1 test task.');

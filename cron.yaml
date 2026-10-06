@@ -7,6 +7,11 @@ cron:
   url: /tasks/generate-stats
   schedule: every 24 hours
 
+- description: admin test email (trigger on demand)
+  url: /dailyemail/test
+  schedule: every 8760 hours
+  timezone: America/Chicago
+
 - description: daily APOD email
   url: /dailyemail/2009/1/7
   schedule: every day 10:00

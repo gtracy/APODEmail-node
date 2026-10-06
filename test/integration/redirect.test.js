@@ -99,6 +99,16 @@ describe('Canonical Redirection Middleware Tests', () => {
         expect(response.status).not.toBe(301);
     });
 
+    it('should NOT redirect Cloud Scheduler requests', async () => {
+        const response = await request(app)
+            .get('/dailyemail/test')
+            .set('Host', 'apod-email-node.uc.r.appspot.com')
+            .set('X-Forwarded-Proto', 'http')
+            .set('X-CloudScheduler', 'true');
+
+        expect(response.status).not.toBe(301);
+    });
+
     it('should NOT redirect in non-production environments', async () => {
         // Override back to test environment
         process.env.NODE_ENV = 'test';
