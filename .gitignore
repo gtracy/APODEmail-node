@@ -156,3 +156,4 @@ email_preview.html
 # Python venv
 venv/
 venv311/
+.gstack/

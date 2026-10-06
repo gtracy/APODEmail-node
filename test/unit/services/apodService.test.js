@@ -85,4 +85,18 @@ describe('apodService', () => {
         expect(result.html).not.toContain('Today\'s APOD is a Video!');
         expect(result.html).toContain('View today\'s Astronomy Picture of the Day on NASA APOD');
     });
+
+    it('throws an error if fetched APOD explanation is empty', async () => {
+        const mockData = {
+            title: 'Test Empty Explanation',
+            explanation: '',
+            date: '2026-10-05',
+            url: 'https://example.com/image.jpg',
+            media_type: 'image'
+        };
+
+        vi.spyOn(apodScraper, 'getDataByDate').mockResolvedValue(mockData);
+
+        await expect(apodService.fetchAPOD()).rejects.toThrow('APOD data missing valid explanation');
+    });
 });

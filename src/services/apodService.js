@@ -11,6 +11,11 @@ async function fetchAPOD() {
     try {
         const data = await apodScraper.getDataByDate(new Date());
 
+        if (!data || !data.explanation || data.explanation.trim().length === 0) {
+            logger.error({ event: 'apod_missing_explanation', data }, 'APOD data missing valid explanation');
+            throw new Error('APOD data missing valid explanation');
+        }
+
         // Data structure:
         // {
         //   "title": "Moon Games",

@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // same way the scraper does and spy on that shared instance.
 const axios = require('axios');
 
-const { getDataByDate, isKnownVideoSource, absolutizeApodUrl } = require('../../../src/services/apodScraper');
+const { getDataByDate, isKnownVideoSource, absolutizeApodUrl, cleanExplanation, parseRss, parseHtml } = require('../../../src/services/apodScraper');
 
 function mockPage(html) {
     vi.spyOn(axios, 'get').mockResolvedValue({ data: Buffer.from(html, 'utf8') });
@@ -185,5 +185,109 @@ describe('apodScraper science.nasa.gov layout (video day, caption explanation)',
         expect(data.explanation).toMatch(/^What do auroras look like from above\?/);
         expect(data.explanation).toContain('href="https://apod.nasa.gov/apod/ap120209.html"');
         expect(data.explanation).not.toMatch(/href="ap\d/);
+    });
+});
+
+describe('cleanExplanation', () => {
+    it('strips leading Explanation: with various markup patterns', () => {
+        expect(cleanExplanation('<strong>Explanation: </strong>Hello')).toBe('Hello');
+        expect(cleanExplanation('<strong>Explanation:</strong> Hello')).toBe('Hello');
+        expect(cleanExplanation('<b>Explanation:</b> Hello')).toBe('Hello');
+        expect(cleanExplanation('<b> Explanation: </b> Hello')).toBe('Hello');
+        expect(cleanExplanation('Explanation: Hello')).toBe('Hello');
+        expect(cleanExplanation('  \n\t<strong>Explanation:</strong> Hello  ')).toBe('Hello');
+    });
+
+    it('strips trailing boilerplate footers', () => {
+        const full = 'Hello world.<br><br><strong>Your Sky Surprise: </strong><a href="#">Birthday</a><br><strong>Tomorrow\'s picture: </strong>open space';
+        expect(cleanExplanation(full)).toBe('Hello world.');
+
+        const videoFooter = 'Cosmic gas expands.<br><br><strong>Tomorrow\'s picture: </strong>eerie space bubble';
+        expect(cleanExplanation(videoFooter)).toBe('Cosmic gas expands.');
+
+        const skySurpriseNoYour = 'Auroras dance.<br /><br /> Sky Surprise:  <a href="#">Birthday</a> (after 1995)';
+        expect(cleanExplanation(skySurpriseNoYour)).toBe('Auroras dance.');
+    });
+
+    it('rewrites relative links to absolute URLs', () => {
+        const input = 'Visit <a href="/image-article/test/">link</a> or archive <a href="ap120209.html">old</a>';
+        const cleaned = cleanExplanation(input);
+        expect(cleaned).toContain('href="https://science.nasa.gov/image-article/test/"');
+        expect(cleaned).toContain('href="https://apod.nasa.gov/apod/ap120209.html"');
+    });
+});
+
+describe('parseRss', () => {
+    const sampleRss = `<?xml version="1.0" encoding="UTF-8" ?>
+    <rss version="2.0" xmlns:apod="https://science.nasa.gov/apod/">
+    <channel>
+        <item>
+            <title>Sombrero Galaxy</title>
+            <link>https://science.nasa.gov/image-article/apod-2026-october-5-sombrero-galaxy/</link>
+            <pubDate>Mon, 05 Oct 2026 04:05:00 +0000</pubDate>
+            <apod:url>https://science.nasa.gov/image-article/apod-2026-october-5-sombrero-galaxy/</apod:url>
+            <apod:hdurl>https://assets.science.nasa.gov/apod/sombrero.jpg</apod:hdurl>
+            <apod:credit><![CDATA[<a href="https://example.com">John Doe</a>]]></apod:credit>
+            <apod:explanation><![CDATA[<strong>Explanation: </strong>A magnificent galaxy.<br><br><strong>Tomorrow's picture: </strong>smile]]></apod:explanation>
+            <content:encoded><![CDATA[<img src="https://assets.science.nasa.gov/apod/sombrero.jpg">]]></content:encoded>
+        </item>
+        <item>
+            <title>Winking Star Video</title>
+            <link>https://science.nasa.gov/image-article/apod-2026-september-9-winking-star/</link>
+            <pubDate>Wed, 09 Sep 2026 04:05:00 +0000</pubDate>
+            <apod:url>https://science.nasa.gov/image-article/apod-2026-september-9-winking-star/</apod:url>
+            <apod:hdurl>https://assets.science.nasa.gov/apod/star_frame.jpg</apod:hdurl>
+            <apod:credit><![CDATA[Jane Astronomer]]></apod:credit>
+            <apod:explanation><![CDATA[<strong>Explanation:</strong> A binary star system winks.]]></apod:explanation>
+            <content:encoded><![CDATA[<video controls><source src="https://assets.science.nasa.gov/apod/star.mp4" type="video/mp4"></video>]]></content:encoded>
+        </item>
+    </channel>
+    </rss>`;
+
+    it('correctly parses an image day from RSS', () => {
+        const result = parseRss(sampleRss);
+        expect(result).not.toBeNull();
+        expect(result.title).toBe('Sombrero Galaxy');
+        expect(result.media_type).toBe('image');
+        expect(result.url).toBe('https://assets.science.nasa.gov/apod/sombrero.jpg');
+        expect(result.copyright).toBe('John Doe');
+        expect(result.explanation).toBe('A magnificent galaxy.');
+    });
+
+    it('correctly parses a video day with date matching from RSS', () => {
+        const result = parseRss(sampleRss, '2026-09-09');
+        expect(result).not.toBeNull();
+        expect(result.title).toBe('Winking Star Video');
+        expect(result.media_type).toBe('video');
+        expect(result.url).toBe('https://assets.science.nasa.gov/apod/star.mp4');
+        expect(result.copyright).toBe('Jane Astronomer');
+        expect(result.explanation).toBe('A binary star system winks.');
+    });
+});
+
+describe('getDataByDate fallback handling', () => {
+    it('falls back to HTML scraping if RSS request fails', async () => {
+        const html = `<html><head><title>APOD: Fallback Title</title></head>
+        <body>
+            <h1>Fallback Title</h1>
+            <div class="media-detail-hero__media"><img src="https://example.com/fallback.jpg"></div>
+            <p><strong>Explanation: </strong>Fallback explanation content.</p>
+        </body></html>`;
+
+        // First call (RSS) fails, second call (HTML) succeeds
+        vi.spyOn(axios, 'get')
+            .mockRejectedValueOnce(new Error('RSS feed timeout'))
+            .mockResolvedValueOnce({ data: Buffer.from(html, 'utf8') });
+
+        const data = await getDataByDate(new Date('2026-10-05'));
+        expect(data.title).toBe('Fallback Title');
+        expect(data.explanation).toBe('Fallback explanation content.');
+        expect(data.url).toBe('https://example.com/fallback.jpg');
+    });
+
+    it('throws error when both RSS and HTML fail', async () => {
+        vi.spyOn(axios, 'get').mockRejectedValue(new Error('Network offline'));
+
+        await expect(getDataByDate(new Date('2026-10-05'))).rejects.toThrow('Failed to retrieve valid APOD data from all sources');
     });
 });

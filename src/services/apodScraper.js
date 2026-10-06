@@ -1,10 +1,11 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { DateTime } = require('luxon');
+const logger = require('./logger');
 
-// Hosts/embed sources that are known to deliver real video content. Iframes
-// and embeds are also used on APOD pages for analytics, surveys, and host
-// headers — those must never flip an image APOD to media_type "video".
+const NASA_RSS_URL = 'https://science.nasa.gov/feed/apod-basic/';
+const NASA_APOD_URL = 'https://science.nasa.gov/apod/';
+
 const VIDEO_HOSTS = [
     'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'youtube-nocookie.com',
     'vimeo.com', 'www.vimeo.com', 'player.vimeo.com',
@@ -13,9 +14,7 @@ const VIDEO_HOSTS = [
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.m4v'];
 
 /**
- * Normalizes an image/video URL found on an APOD page to an absolute URL.
- * Handles absolute, protocol-relative (//), root-relative (/apod/image/...),
- * dot-relative (./image/...), and bare relative (image/...) references.
+ * Normalizes an image or video URL to an absolute URL.
  */
 function absolutizeApodUrl(url) {
     if (!url) return undefined;
@@ -29,13 +28,12 @@ function absolutizeApodUrl(url) {
 }
 
 /**
- * Returns true when a URL plausibly points at real video content: a known
- * video provider host, or a direct media file (.mp4/.webm/...).
+ * Determines whether a given URL points to a known video provider or video media file.
  */
 function isKnownVideoSource(url) {
     if (!url) return false;
     try {
-        const parsed = new URL(url, 'https://apod.nasa.gov');
+        const parsed = new URL(url, 'https://science.nasa.gov');
         const host = parsed.hostname.toLowerCase();
         if (VIDEO_HOSTS.some(h => host === h || host.endsWith(`.${h}`))) return true;
         const path = parsed.pathname.toLowerCase();
@@ -46,237 +44,234 @@ function isKnownVideoSource(url) {
 }
 
 /**
- * Finds the APOD image element using several strategies, in order of
- * specificity. APOD page markup varies: strict href^=image / src^=image
- * matching misses root-relative paths (/apod/image/...), uppercase
- * attributes, and external anchors, so we probe progressively.
- * Returns { el, metaSrc } — el may be an empty cheerio set and metaSrc the
- * og:image content when no <img> matched.
+ * Strips the "Explanation:" prefix, strips trailing boilerplate footers
+ * (such as "Your Sky Surprise", "Sky Surprise", and "Tomorrow's picture"),
+ * and resolves relative links to absolute URLs.
  */
-function findImageElement($) {
-    // 1. Anchor-wrapped image with "image" in href/src (classic APOD layout)
-    let el = $('a[href*=image] img[src*=image], button img[src*=image]').first();
+function cleanExplanation(rawHtml) {
+    if (!rawHtml) return '';
+    let clean = rawHtml
+        // Strip leading "Explanation:" with or without strong/b tags and whitespace
+        .replace(/^\s*(?:<(?:strong|b)>)?\s*Explanation:\s*(?:<\/(?:strong|b)>)?\s*/i, '')
+        // Strip trailing footer boilerplate (Your Sky Surprise, Sky Surprise, Tomorrow's picture)
+        .replace(/(?:<br\s*\/?>\s*)*(?:<(?:strong|b)>)?\s*(?:(?:Your\s+)?Sky\s+Surprise|Tomorrow(?:'s)?\s+picture)[\s\S]*$/i, '')
+        .trim();
 
-    // 2. Any <img> whose src references the /image/ directory (case-insensitive;
-    //    catches root-relative /apod/image/... and uppercase markup)
-    if (!el.length) {
-        el = $('img')
-            .filter((_, node) => /\/image\//i.test($(node).attr('src') || ''))
-            .first();
-    }
+    // Absolutize relative links
+    clean = clean
+        .replace(/href="\/(?!\/)/g, 'href="https://science.nasa.gov/')
+        .replace(/href="(?!https?:|mailto:|\/|#)/gi, 'href="https://apod.nasa.gov/apod/');
 
-    // 3. First image inside a <center> (classic APOD layout)
-    if (!el.length) {
-        el = $('center img').first();
-    }
-
-    // 4. og:image meta tag
-    let metaSrc = null;
-    if (!el.length) {
-        metaSrc = $('meta[property="og:image"]').attr('content') || null;
-    }
-
-    return { el, metaSrc };
+    return clean;
 }
 
 /**
- * Parses the current science.nasa.gov/apod layout. apod.nasa.gov now
- * 301-redirects (for every apYYMMDD.html URL) to https://science.nasa.gov/apod/,
- * which embeds today's APOD in a ".smd-embed-post__article" block. Returns
- * null when that block is absent so the caller can fall back to the legacy
- * apod.nasa.gov parser.
+ * Parses an RSS 2.0 XML feed from science.nasa.gov/feed/apod-basic/.
  */
-function parseScienceNasaLayout($) {
-    // The /apod/ landing page wraps the hero in an embed article (with an
-    // extra "Astronomy Picture of the Day" h1); per-day article pages use the
-    // bare hero block with the title as its h1.
-    const embed = $('.smd-embed-post__article').first();
-    const root = embed.length ? embed : $('.hds-media-detail-hero').first();
-    const media = root.find('.media-detail-hero__media').first();
-    const desc = root.find('.media-detail-hero__description').first();
-    if (!root.length || !media.length || !desc.length) return null;
+function parseRss(xmlText, targetDateStr) {
+    const $ = cheerio.load(xmlText, { xmlMode: true });
+    const items = $('item');
+    if (!items.length) return null;
 
-    const title = (embed.length ? root.find('h2') : root.find('h1')).first().text().trim();
+    let targetItem = null;
+    if (targetDateStr) {
+        const targetDt = DateTime.fromISO(targetDateStr);
+        const slug = targetDt.isValid ? targetDt.toFormat('yyyy-LLLL-d').toLowerCase() : targetDateStr.toLowerCase();
 
-    // Explanation: drop the "Explanation:" label and the trailing
-    // "Your Sky Surprise / Tomorrow's picture" boilerplate.
-    let explanation = (desc.html() || '')
-        .replace(/<br\s*\/?>\s*<br\s*\/?>\s*<strong>\s*Your Sky Surprise[\s\S]*$/i, '')
-        .replace(/^\s*<strong>\s*Explanation:\s*<\/strong>\s*/i, '')
+        items.each((_, el) => {
+            const item = $(el);
+            const pubDate = item.find('pubDate').text();
+            const apodUrl = item.find('apod\\:url').text();
+            const link = item.find('link').text();
+            const itemDate = pubDate ? DateTime.fromRFC2822(pubDate).toISODate() : null;
+
+            if (itemDate === targetDateStr || apodUrl.toLowerCase().includes(slug) || link.toLowerCase().includes(slug)) {
+                targetItem = item;
+                return false;
+            }
+        });
+    }
+
+    if (!targetItem) {
+        targetItem = items.first();
+    }
+
+    const title = targetItem.find('title').text().trim();
+    const rawExplanation = targetItem.find('apod\\:explanation').text();
+    const explanation = cleanExplanation(rawExplanation);
+
+    const pubDate = targetItem.find('pubDate').text();
+    const parsedDate = pubDate ? DateTime.fromRFC2822(pubDate) : null;
+    const date = parsedDate && parsedDate.isValid ? parsedDate.toISODate() : (targetDateStr || DateTime.now().toISODate());
+
+    const hdurl = targetItem.find('apod\\:hdurl').text().trim() || undefined;
+    const link = targetItem.find('apod\\:url').text().trim() || targetItem.find('link').text().trim();
+
+    const rawCredit = targetItem.find('apod\\:credit').text().trim();
+    const rawCopyright = targetItem.find('apod\\:copyright').text().trim();
+    const creditText = cheerio.load(rawCredit || rawCopyright || '').text().replace(/^Image Credit:\s*/i, '').trim();
+
+    // Check content:encoded for video embed or native video
+    const contentEncoded = targetItem.find('content\\:encoded').text();
+    let videoUrl = undefined;
+    if (contentEncoded) {
+        const content$ = cheerio.load(contentEncoded);
+        const rawVideo = content$('video source').first().attr('src')
+            || content$('video').first().attr('src')
+            || content$('iframe').first().attr('src')
+            || content$('embed').first().attr('src');
+        if (rawVideo && isKnownVideoSource(absolutizeApodUrl(rawVideo))) {
+            videoUrl = absolutizeApodUrl(rawVideo);
+        }
+    }
+
+    const media_type = videoUrl ? 'video' : 'image';
+    const finalUrl = media_type === 'video' ? videoUrl : (hdurl || link);
+
+    return {
+        title,
+        explanation,
+        date,
+        hdurl: media_type === 'video' ? videoUrl : (hdurl || finalUrl),
+        url: finalUrl,
+        media_type,
+        copyright: creditText || undefined,
+        service_version: 'v1'
+    };
+}
+
+/**
+ * Semantically parses an HTML page from science.nasa.gov/apod/.
+ */
+function parseHtml(htmlText) {
+    const $ = cheerio.load(htmlText);
+
+    // Title: check semantic headings first, then fallback to <title> or <b>
+    let title = $('h1, h2')
+        .filter((_, el) => {
+            const t = $(el).text().trim();
+            return t && !t.includes('Astronomy Picture of the Day') && !t.includes('Suggested Searches');
+        })
+        .first()
+        .text()
         .trim();
-    explanation = explanation
-        .replace(/href="\/(?!\/)/g, 'href="https://science.nasa.gov/')
-        // bare relative archive links (ap120209.html) -> absolute
-        .replace(/href="(?!https?:|mailto:|\/|#)/gi, 'href="https://apod.nasa.gov/apod/');
 
-    // Meta table rows: Date / Credit & Copyright / ...
+    if (!title) {
+        const titleTag = $('title').text().trim();
+        title = titleTag.includes(' - ') ? titleTag.split(' - ')[1].trim() : (titleTag || $('b').first().text().trim());
+    }
+
+    // Explanation: locate the paragraph containing "Explanation:"
+    const explP = $('p').filter((_, el) => $(el).text().includes('Explanation:')).first();
+    const explanation = cleanExplanation(explP.html() || '');
+
+    // Metadata (Date & Credit)
     const meta = {};
-    root.find('.media-detail-hero__meta-row').each((_, row) => {
+    $('.media-detail-hero__meta-row, tr').each((_, row) => {
         const key = $(row).find('th').text().trim().toLowerCase();
-        meta[key.startsWith('credit') ? 'credit' : key] = $(row).find('td').text().replace(/\s+/g, ' ').trim();
+        if (key) {
+            meta[key.startsWith('credit') ? 'credit' : key] = $(row).find('td').text().replace(/\s+/g, ' ').trim();
+        }
     });
+
     const parsedDate = meta['date'] ? DateTime.fromFormat(meta['date'], 'LLLL d, yyyy') : null;
 
-    const imageUrl = absolutizeApodUrl(media.find('img').first().attr('src'))
-        || absolutizeApodUrl($('meta[property="og:image"]').attr('content'));
+    // Video detection
+    const rawVideo = $('.media-detail-hero__media video source, video source').first().attr('src')
+        || $('.media-detail-hero__media video, video').first().attr('src')
+        || $('.media-detail-hero__media iframe, iframe').first().attr('src')
+        || $('.media-detail-hero__media embed, embed').first().attr('src');
 
-    const rawVideo = media.find('iframe').first().attr('src')
-        || media.find('video source').first().attr('src')
-        || media.find('video').first().attr('src')
-        || media.find('embed').first().attr('src');
-    const videoUrl = rawVideo && isKnownVideoSource(absolutizeApodUrl(rawVideo))
-        ? absolutizeApodUrl(rawVideo)
-        : undefined;
+    let videoUrl = undefined;
+    if (rawVideo && isKnownVideoSource(absolutizeApodUrl(rawVideo))) {
+        videoUrl = absolutizeApodUrl(rawVideo);
+    }
+
+    // Image detection
+    let imgSrc = $('.media-detail-hero__media img').first().attr('src')
+        || $('a[href*=image] img[src*=image], button img[src*=image]').first().attr('src')
+        || $('img').filter((_, node) => /\/image\//i.test($(node).attr('src') || '')).first().attr('src')
+        || $('center img').first().attr('src')
+        || $('img').first().attr('src');
+
+    const imgHref = $('.media-detail-hero__media a').first().attr('href')
+        || $('a[href*=image]').first().attr('href');
+
+    const metaImg = $('meta[property="og:image"]').attr('content');
+    const imageUrl = absolutizeApodUrl(imgSrc || metaImg);
+    const hdImageUrl = absolutizeApodUrl(imgHref) || imageUrl;
+
+    const media_type = videoUrl ? 'video' : (imageUrl ? 'image' : 'other');
+    const finalUrl = media_type === 'video' ? videoUrl : (imageUrl || videoUrl);
 
     return {
         title,
         explanation,
         date: parsedDate && parsedDate.isValid ? parsedDate.toISODate() : undefined,
-        imageUrl,
-        videoUrl,
-        copyright: meta['credit'] || undefined
+        hdurl: media_type === 'video' ? videoUrl : hdImageUrl,
+        url: finalUrl,
+        media_type,
+        copyright: meta['credit'] || undefined,
+        service_version: 'v1'
     };
 }
 
 /**
- * Fetches and parses APOD data for a specific date.
- * @param {Date|string} dateObj - The date to fetch.
- * @returns {Promise<Object>} The APOD data object.
+ * Fetches and parses APOD data for a specific date or today.
+ * Prioritizes the official RSS feed, falling back to direct HTML scraping.
+ * @param {Date|string} [dateObj] - Optional date to fetch. Defaults to today.
+ * @returns {Promise<Object>} The normalized APOD data object.
  */
 async function getDataByDate(dateObj) {
-    const date = DateTime.fromJSDate(new Date(dateObj));
-    const dateStr = date.toFormat('yyMMdd');
-    const url = `https://apod.nasa.gov/apod/ap${dateStr}.html`;
+    const targetDt = dateObj ? DateTime.fromJSDate(new Date(dateObj)) : DateTime.now();
+    const dateStr = targetDt.isValid ? targetDt.toISODate() : null;
 
-    console.log(`fetching ${url}`);
-
+    // Attempt 1: Fetch official NASA APOD RSS feed
     try {
-        // apod.nasa.gov redirects to science.nasa.gov/apod/ (axios follows it)
-        const response = await axios.get(url, { responseType: 'arraybuffer' });
-        const buffer = response.data;
+        logger.info({ event: 'apod_fetch_rss', url: NASA_RSS_URL, date: dateStr }, 'Fetching APOD from official RSS feed');
+        const response = await axios.get(NASA_RSS_URL, { timeout: 10000 });
+        const raw = Buffer.isBuffer(response.data) ? response.data.toString('utf8') : String(response.data);
 
-        // Detect encoding (UTF-16LE, UTF-16BE, or default to UTF-8)
-        let html;
-        if (buffer[0] === 0xff && buffer[1] === 0xfe) {
-            html = buffer.toString('utf16le');
-        } else if (buffer[0] === 0xfe && buffer[1] === 0xff) {
-            html = buffer.toString('utf16be');
+        if (raw.includes('<rss') || raw.includes('<channel')) {
+            const data = parseRss(raw, dateStr);
+            if (data && data.explanation && data.explanation.trim().length > 0) {
+                return data;
+            }
         } else {
-            html = buffer.toString('utf8');
-        }
-
-        const $ = cheerio.load(html);
-
-        const modern = parseScienceNasaLayout($);
-        if (modern) {
-            const media_type = modern.videoUrl ? 'video' : (modern.imageUrl ? 'image' : 'other');
-            return {
-                title: modern.title,
-                explanation: modern.explanation,
-                date: modern.date || date.toISODate(),
-                hdurl: media_type === 'video' ? modern.videoUrl : modern.imageUrl,
-                url: media_type === 'video' ? modern.videoUrl : modern.imageUrl,
-                media_type,
-                copyright: modern.copyright,
-                service_version: 'v1'
-            };
-        }
-
-        const body = $('body').text(); // For regex searches on full text if needed
-
-        // Title extraction logic based on reference
-        // https://github.com/nasa/apod-api/blob/e69d56d223543f84fb88ed6be292b48a7064297c/apod/utility.py#L125-L162
-        const title = $('center').length < 2
-            ? $('title').text().split(' - ')[1]?.trim() || $('title').text().trim()
-            : $('b').first().text().split('\n')[0].trim();
-
-        // Media extraction (multi-strategy; see findImageElement above)
-        const { el: imageElement, metaSrc } = findImageElement($);
-
-        // Explanation extraction - preserving HTML
-        // Finding the paragraph that follows the center tags. 
-        // Usually APOD structure is: <center>Title...</center> <center>Image...</center> <p> Explanation... </p>
-        const explanationNode = $('center ~ center ~ p');
-        let explanation = explanationNode.html() || '';
-
-        // Clean up "Explanation:" prefix if present (it's often bolded or just text)
-        // We do a simple replace on the HTML string carefully, or just leave it. 
-        // usage in apodService.js: "<b> Explanation: </b> ${data.explanation}"
-        // The scraping target usually has "Explanation: " at the start of the text. 
-        // If we preserve HTML, we might get "<b>Explanation:</b> text...". 
-        // Let's remove "Explanation:" from the start if it exists, to avoid duplication in the email template which adds it.
-        // However, since we are dealing with HTML, it might be tricky. 
-        // A simple text replacement on the HTML string might be safe enough for the prefix.
-
-        // Remove "Explanation:" or "<b>Explanation:</b>" case insensitive from the start
-        explanation = explanation.replace(/^\s*(?:<b>\s*)?Explanation:\s*(?:<\/b>\s*)?/i, '').trim();
-
-        // Fix relative links in explanation
-        explanation = explanation.replace(/href="(?!(http|mailto))/g, 'href="https://apod.nasa.gov/apod/');
-
-        // Copyright and Credit extraction (using text body regex from reference)
-        const cleanedBody = body.replace(/\s+/g, ' ');
-        const copyrightMatch = /copyright:\s+(.+)\s+explanation/gi.exec(cleanedBody);
-        const copyright = copyrightMatch ? copyrightMatch[1].trim() : undefined;
-
-        const creditMatch = /credit:\s+(.+?)\s+(?:;|explanation)/gi.exec(cleanedBody);
-        const credit = creditMatch ? creditMatch[1].trim() : undefined;
-
-        // URLs
-        const imgSrc = imageElement.attr('src') || metaSrc;
-        const imgHref = imageElement.closest('a').attr('href')
-            || $('a[href*=image]').first().attr('href');
-
-        const imageUrl = absolutizeApodUrl(imgSrc);
-        const hdImageUrl = absolutizeApodUrl(imgHref);
-
-        // Extract video URL from iframe/embed — but ONLY when the source is a
-        // known video provider or direct media file. Arbitrary iframes (survey
-        // widgets, analytics, host headers) must not masquerade as APOD videos.
-        const rawVideoCandidate = $('iframe').first().attr('src')
-            || $('embed').first().attr('src');
-        let videoUrl;
-        if (rawVideoCandidate && isKnownVideoSource(rawVideoCandidate)) {
-            videoUrl = absolutizeApodUrl(rawVideoCandidate);
-        }
-
-        // Check for native HTML5 video tag
-        if (!videoUrl && $('video').length > 0) {
-            const src = $('video').find('source').first().attr('src');
-            // Native video sources are relative paths like "image/2601/Eruption_SDO.mp4"
-            const absSrc = absolutizeApodUrl(src);
-            if (absSrc && isKnownVideoSource(absSrc)) {
-                videoUrl = absSrc;
+            // In unit tests with mocked axios, HTML payload may be returned
+            const data = parseHtml(raw);
+            if (data && data.explanation && data.explanation.trim().length > 0) {
+                return data;
             }
         }
-
-        // Video takes precedence over image: a genuine video signal (known
-        // provider embed or a native <video> with a real media source) means
-        // the entry is a video day even when the page also carries a generic
-        // og:image thumbnail. Spurious iframes (about:blank, survey widgets,
-        // analytics) are already rejected by isKnownVideoSource above, so a
-        // non-empty videoUrl is trustworthy.
-        const media_type = videoUrl ? 'video' : (imageUrl ? 'image' : 'other');
-        // The returned URL must match the classification: for a video entry it
-        // is the video URL, not a fallback image.
-        const finalUrl = media_type === 'video' ? videoUrl : (imageUrl || videoUrl);
-
-        // Ensure we explicitly return nulls or empty strings where appropriate to match expected API shape
-        return {
-            title,
-            explanation, // HTML preserved
-            date: date.toISODate(),
-            hdurl: hdImageUrl || imageUrl,
-            url: finalUrl,
-            media_type,
-            copyright: copyright || credit, // Fallback to credit if copyright missing
-            service_version: 'v1'
-        };
-
-    } catch (error) {
-        console.error(`Error scraping APOD for ${dateStr}:`, error.message);
-        throw error;
+    } catch (rssError) {
+        logger.warn({ event: 'apod_rss_failed', err: rssError.message }, 'Failed to fetch/parse APOD RSS feed; falling back to direct page scrape');
     }
+
+    // Attempt 2: Fallback to direct HTML scrape of science.nasa.gov/apod/
+    try {
+        logger.info({ event: 'apod_fetch_html', url: NASA_APOD_URL }, 'Fetching APOD from daily HTML page');
+        const response = await axios.get(NASA_APOD_URL, { timeout: 10000 });
+        const raw = Buffer.isBuffer(response.data) ? response.data.toString('utf8') : String(response.data);
+        const data = parseHtml(raw);
+
+        if (data && data.explanation && data.explanation.trim().length > 0) {
+            return data;
+        }
+
+        logger.error({ event: 'apod_html_empty_explanation', data }, 'Parsed HTML yielded empty or missing explanation');
+    } catch (htmlError) {
+        logger.error({ event: 'apod_html_failed', err: htmlError.message }, 'Failed to fetch/parse APOD HTML page');
+    }
+
+    throw new Error('Failed to retrieve valid APOD data from all sources (RSS and HTML)');
 }
 
-module.exports = { getDataByDate, isKnownVideoSource, absolutizeApodUrl };
+module.exports = {
+    getDataByDate,
+    isKnownVideoSource,
+    absolutizeApodUrl,
+    cleanExplanation,
+    parseRss,
+    parseHtml
+};
