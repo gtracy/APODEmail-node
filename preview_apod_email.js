@@ -1,22 +1,23 @@
 /**
  * APOD Email Preview Generator
- * 
- * This script generates an HTML preview of the APOD email for:
- * 1. A fixed date known to have a video (2026-01-13) - for regression testing video handling.
- * 2. Today's date - to see the current APOD.
- * 
+ *
+ * Renders the EXACT production email markup for any date by running the same
+ * buildEmail() code path that fetchAPOD() uses. Use it to verify that multiple
+ * dates (images, YouTube videos, native videos) render correctly in email
+ * clients before shipping.
+ *
  * Usage:
- *   node preview_apod_email.js
- * 
- * Output:
- *   - email_preview_2026-01-13.html
- *   - email_preview_YYYY-MM-DD.html (today)
+ *   node preview_apod_email.js                       # default date set + today
+ *   node preview_apod_email.js 2026-10-18 2026-07-13 # any historical date(s)
+ *
+ * Output (per date):
+ *   preview-tests/<name>.html and preview-tests/<name>.txt
  */
 
 const { getDataByDate } = require('./src/services/apodScraper');
+const { buildEmail } = require('./src/services/apodService');
 const fs = require('fs');
 const path = require('path');
-const cheerio = require('cheerio');
 
 const PREVIEW_DIR = path.join(__dirname, 'preview-tests');
 
@@ -25,22 +26,35 @@ if (!fs.existsSync(PREVIEW_DIR)) {
     fs.mkdirSync(PREVIEW_DIR, { recursive: true });
 }
 
-async function runPreviews() {
-    // Mapping of dates to descriptive filenames
-    const previews = [
-        { date: '2026-01-13', name: 'video-tag' },
-        { date: '2013-11-30', name: 'vimeo' },
-        { date: '2022-12-04', name: 'youtube' },
-        { date: '2022-01-13', name: 'static-image' }
-    ];
+const DEFAULT_PREVIEWS = [
+    { date: '2026-01-13', name: 'video-tag' },
+    { date: '2013-11-30', name: 'vimeo' },
+    { date: '2022-12-04', name: 'youtube' },
+    { date: '2022-01-13', name: 'static-image' }
+];
 
-    // Add today
-    const today = new Date();
-    const todayStr = today.getFullYear() + '-' +
-        String(today.getMonth() + 1).padStart(2, '0') + '-' +
-        String(today.getDate()).padStart(2, '0');
-    
-    previews.push({ date: todayStr, name: 'today' });
+async function runPreviews() {
+    // CLI dates take precedence: each YYYY-MM-DD arg previews that exact day.
+    let previews;
+    const args = process.argv.slice(2);
+    const argDates = args.filter((a) => /^\d{4}-\d{2}-\d{2}$/.test(a));
+
+    if (args.length && !argDates.length) {
+        console.error('Expected dates in YYYY-MM-DD format.');
+        process.exit(1);
+    }
+
+    if (argDates.length) {
+        previews = argDates.map((date) => ({ date, name: date }));
+    } else {
+        // Add today
+        const today = new Date();
+        const todayStr = today.getFullYear() + '-' +
+            String(today.getMonth() + 1).padStart(2, '0') + '-' +
+            String(today.getDate()).padStart(2, '0');
+
+        previews = [...DEFAULT_PREVIEWS, { date: todayStr, name: 'today' }];
+    }
 
     console.log(`Starting preview generation in ${PREVIEW_DIR}`);
 
@@ -61,221 +75,26 @@ async function generateEmailPreview(dateStr, fileName) {
         // Fetch data from APOD
         const data = await getDataByDate(date);
 
-        console.log(`✅ Scraped data: ${data.title}`);
-
-        // Generate HTML using same logic as apodService.js
-        const title = `APOD - ${data.title}`;
-        let mediaHtml = '';
-
-        if (data.media_type === 'video') {
-            let isYouTubeEmbed = false;
-            let isVimeoEmbed = false;
-
-            try {
-                const urlObj = new URL(data.url);
-                const hostname = urlObj.hostname;
-                // Strict hostname check
-                if (hostname === 'youtube.com' || hostname === 'www.youtube.com' || hostname === 'youtu.be') {
-                    isYouTubeEmbed = true;
-                }
-                if (hostname === 'vimeo.com' || hostname === 'www.vimeo.com' || hostname === 'player.vimeo.com') {
-                    isVimeoEmbed = true;
-                }
-            } catch (e) {
-                console.error('Invalid URL:', data.url);
-            }
-
-            if (isYouTubeEmbed || isVimeoEmbed) {
-                console.log('   Video Type: YouTube/Vimeo embed');
-                
-                if (isYouTubeEmbed) {
-                    console.log('   -> Using YouTube Mock Player for local/email compatibility');
-                    const videoIdMatch = data.url.match(/embed\/([^/?#]+)/);
-                    const videoId = videoIdMatch ? videoIdMatch[1] : '';
-                    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-                    
-                    mediaHtml = `
-                        <center>
-                            <div style="max-width: 640px; margin: 20px auto; position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-                                <a href="${data.url}" style="text-decoration: none; display: block; position: relative;">
-                                    <img src="${thumbnailUrl}" style="width: 100%; display: block;" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'">
-                                    <!-- Play Button Overlay -->
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                                                width: 80px; height: 80px; background: rgba(0,0,0,0.6); border-radius: 50%; 
-                                                display: flex; align-items: center; justify-content: center; border: 4px solid white;">
-                                        <div style="width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; 
-                                                    border-left: 30px solid white; margin-left: 8px;"></div>
-                                    </div>
-                                </a>
-                            </div>
-                            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #666;">
-                                <a href="${data.url}" style="color: #667eea; text-decoration: none; font-weight: bold;">Watch Video on YouTube</a>
-                            </p>
-                        </center>
-                    `;
-                } else {
-                    console.log('   -> Using Vimeo Iframe');
-                    mediaHtml = `
-                        <center>
-                            <div style="max-width: 640px; margin: 20px auto;">
-                                <iframe width="100%" height="360" src="${data.url}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></iframe>
-                            </div>
-                            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #666;">
-                                Can't see the video? <a href="${data.url}" style="color: #667eea; text-decoration: none; font-weight: bold;">Watch it directly on Vimeo</a>
-                            </p>
-                        </center>
-                    `;
-                }
-            } else {
-                console.log('   Video Type: Native HTML5 video');
-                // Link to the new APOD home on science.nasa.gov. The new site has
-                // no date-addressable per-day URLs (apYYMMDD.html 404s there), so
-                // deep-linking to the day's page is not possible.
-                const apodUrl = 'https://science.nasa.gov/apod/';
-                console.log('   APOD URL:', apodUrl);
-
-                mediaHtml = `
-                    <center style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                   padding: 30px 20px; 
-                                   margin: 20px 0; 
-                                   border-radius: 10px;">
-                        <div style="font-size: 48px; margin-bottom: 10px;">🎬</div>
-                        <h2 style="color: white; margin: 10px 0; font-size: 24px; font-family: Arial, sans-serif;">
-                            Today's APOD is a Video!
-                        </h2>
-                        <p style="color: white; margin: 15px 0; font-size: 16px; line-height: 1.5; font-family: Arial, sans-serif;">
-                            This feature includes video content that cannot be displayed in email.
-                        </p>
-                        <a href="${apodUrl}" 
-                           style="display: inline-block; 
-                                  background: white; 
-                                  color: #667eea; 
-                                  padding: 12px 30px; 
-                                  text-decoration: none; 
-                                  border-radius: 25px; 
-                                  font-weight: bold; 
-                                  font-family: Arial, sans-serif;
-                                  margin-top: 10px;">
-                            ► Watch Video on NASA APOD
-                        </a>
-                    </center>
-                `;
-            }
-        } else if (data.media_type === 'image') {
-            console.log('   Media Type: Image');
-            mediaHtml = `
-                <center>
-                    <a href="${data.hdurl || data.url}">
-                        <img src="${data.url}" alt="${data.title}" style="max-width:100%">
-                    </a>
-                </center>
-            `;
+        if (!data || !data.explanation || data.explanation.trim().length === 0) {
+            throw new Error('APOD data missing valid explanation');
         }
 
-        const copyrightHtml = data.copyright ? `<b>Image Credit & Copyright:</b> ${data.copyright}` : '';
+        console.log(`   Scraped: ${data.title} (${data.date})`);
+        console.log(`   Media type: ${data.media_type}${data.media_type === 'video' ? ` — ${data.url}` : ''}`);
 
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>${title}</title>
-            </head>
-            <body bgcolor="#F4F4FF" text="#000000" link="#0000FF" vlink="#7F0F9F" alink="#FF0000">
-                <center>
-                    <h1> Astronomy Picture of the Day </h1>
-                    <p>
-                        <a href="https://science.nasa.gov/apod/archive">Discover the cosmos!</a>
-                        Each day a different image or photograph of our fascinating universe is featured, along with a brief explanation written by a professional astronomer.
-                    </p>
-                    <p>
-                        ${data.date}
-                    </p>
-                </center>
-                
-                ${mediaHtml}
- 
-                <center>
-                    <b> ${data.title} </b> <br> 
-                    ${copyrightHtml}
-                </center> 
-                
-                <p> 
-                    <b> Explanation: </b> 
-                    ${data.explanation}
-                </p>
-                
-                <center>
-                    <p>
-                        <a href="https://science.nasa.gov/apod/archive">Archive</a> | 
-                        <a href="https://science.nasa.gov/apod/apod-about/">About APOD</a>
-                    </p>
-                </center>
-
-                <hr style="border: none; border-top: 1px solid #ccc; margin: 24px 0;">
-                <div style="font-family: Arial, sans-serif; font-size: 12px; color: #555; line-height: 1.5; text-align: center;">
-                    <p style="margin: 6px 0;">
-                        You are receiving this automated email because you subscribed to the Astronomy Picture of the Day distribution list at <a href="https://apodemail.org" style="color: #667eea;">https://apodemail.org</a>.
-                    </p>
-                    <p style="margin: 6px 0;">
-                        <a href="https://apodemail.org/unsubscribe?email={{email}}" style="color: #667eea; text-decoration: underline;">Unsubscribe</a> | 
-                        <a href="https://apodemail.org" style="color: #667eea;">Manage Subscription</a>
-                    </p>
-                    <p style="margin: 6px 0;">
-                        If you notice any problems, send a note to <a href="mailto:gtracy@gmail.com" style="color: #667eea;">gtracy@gmail.com</a>.
-                    </p>
-                    <p style="margin: 6px 0; color: #777;">
-                        NASA Goddard Space Flight Center<br>
-                        Astrophysics Science Division, Code 660<br>
-                        8800 Greenbelt Road<br>
-                        Greenbelt, MD 20771
-                    </p>
-                </div>
-            </body>
-            </html>
-        `;
-
-        const mediaText = data.media_type === 'image'
-            ? `View Image: ${data.hdurl || data.url}`
-            : `Watch Video: ${data.url}`;
-        const copyrightText = data.copyright ? `Image Credit & Copyright: ${data.copyright}\n\n` : '';
-        const plainExplanation = cheerio.load(data.explanation || '').text().trim();
-
-        const text = `Astronomy Picture of the Day
-${data.date} - ${data.title}
-
-${mediaText}
-
-${copyrightText}Explanation:
-${plainExplanation}
-
-Archive: https://apod.nasa.gov/apod/archivepix.html
-About APOD: https://apod.nasa.gov/apod/lib/about_apod.html
-
---------------------------------------------------
-You are receiving this automated email because you subscribed to the Astronomy Picture of the Day distribution list at https://apodemail.org.
-
-To unsubscribe, visit: https://apodemail.org/unsubscribe?email={{email}}
-Manage subscription: https://apodemail.org
-Feedback: gtracy@gmail.com
-
-NASA Goddard Space Flight Center
-Astrophysics Science Division, Code 660
-8800 Greenbelt Road
-Greenbelt, MD 20771
-`;
+        // Generate the email with the exact same production code path
+        const { title, html, text } = buildEmail(data);
+        console.log(`   Email title: ${title}`);
 
         // Save to file
         const outputFile = path.join(PREVIEW_DIR, `${fileName}.html`);
         fs.writeFileSync(outputFile, html);
         const outputTextFile = path.join(PREVIEW_DIR, `${fileName}.txt`);
         fs.writeFileSync(outputTextFile, text);
-        console.log(`✅ Saved HTML to ${outputFile}`);
-        console.log(`✅ Saved Text to ${outputTextFile}`);
-        console.log(`   (file://${outputFile})`);
-
+        console.log(`   Saved HTML to ${outputFile}`);
+        console.log(`   Saved Text to ${outputTextFile}`);
     } catch (error) {
-        console.error('❌ Error:', error.message);
-        console.error(error.stack);
+        console.error(`   Error for ${dateStr}:`, error.message);
     }
 }
 

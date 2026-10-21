@@ -8,13 +8,21 @@ Astrophysics Science Division, Code 660
 Greenbelt, MD 20771`;
 
 async function fetchAPOD() {
-    try {
-        const data = await apodScraper.getDataByDate(new Date());
+    const data = await apodScraper.getDataByDate(new Date());
 
-        if (!data || !data.explanation || data.explanation.trim().length === 0) {
-            logger.error({ event: 'apod_missing_explanation', data }, 'APOD data missing valid explanation');
-            throw new Error('APOD data missing valid explanation');
-        }
+    if (!data || !data.explanation || data.explanation.trim().length === 0) {
+        logger.error({ event: 'apod_missing_explanation', data }, 'APOD data missing valid explanation');
+        throw new Error('APOD data missing valid explanation');
+    }
+
+    return buildEmail(data);
+}
+
+// Build the email payload ({ title, html, text }) from an APOD data object.
+// Exported so the preview generator (preview_apod_email.js) and tests can run
+// the exact same production markup for any historical date.
+function buildEmail(data) {
+    try {
 
         // Data structure:
         // {
@@ -31,6 +39,9 @@ async function fetchAPOD() {
 
         // Construct HTML manually
         let mediaHtml = '';
+        // Normalized canonical video watch URL, if this APOD is a video with an
+        // extractable ID (used for both HTML and plain-text output).
+        let videoWatchLink = null;
         if (data.media_type === 'image') {
             mediaHtml = `
                 <center>
@@ -63,42 +74,68 @@ async function fetchAPOD() {
                 let videoId = '';
                 let imgUrl = '';
                 let videoLink = data.url;
-
+                // Never link the raw /embed/ URL: opening it as a top-level tab
+                // from an email client triggers a YouTube playback error (Error 153).
                 if (isYouTubeEmbed) {
-                    // Extraction from embed URL: https://www.youtube.com/embed/XXXXXX
-                    const ytMatch = data.url.match(/embed\/([^?#\s]+)/) || data.url.match(/v=([^&?#\s]+)/);
+                    // Extraction from embed URL: https://www.youtube.com/embed/XXXXXX,
+                    // watch URLs (?v=XXXXXX), or short links (https://youtu.be/XXXXXX)
+                    const ytMatch = data.url.match(/embed\/([^?#\s]+)/)
+                        || data.url.match(/v=([^&?#\s]+)/)
+                        || data.url.match(/youtu\.be\/([^?#\s]+)/);
                     if (ytMatch) {
                         videoId = ytMatch[1];
                         imgUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                        videoWatchLink = `https://www.youtube.com/watch?v=${videoId}`;
+                        videoLink = videoWatchLink;
                     }
                 } else if (isVimeoEmbed) {
                     // Extraction from Vimeo embed: https://player.vimeo.com/video/XXXXXX
                     const vimeoMatch = data.url.match(/video\/(\d+)/);
                     if (vimeoMatch) {
                         videoId = vimeoMatch[1];
-                        // Vimeo thumbnails usually require an API call, but we can try a placeholder or a link
-                        // For now, let's at least provide a better link
+                        videoWatchLink = `https://vimeo.com/${videoId}`;
+                        videoLink = videoWatchLink;
                     }
                 }
-
-                if (imgUrl) {
+                if (imgUrl || videoWatchLink) {
+                    // Email-safe video hero card: email clients strip
+                    // 'position: absolute', 'position: relative', 'transform' and
+                    // 'display: flex', so no overlay play button is used. Matches
+                    // the native-video card aesthetic (purple gradient + pill CTA).
+                    const thumbnailHtml = imgUrl
+                        ? `<a href="${videoLink}" style="text-decoration: none;">
+                               <img src="${imgUrl}" alt="Watch Video" style="max-width: 100%; width: 480px; border-radius: 8px; display: block; margin: 0 auto 16px auto; border: 2px solid rgba(255,255,255,0.3);">
+                           </a>`
+                        : '';
                     mediaHtml = `
                         <center>
-                            <div style="position: relative; display: inline-block;">
-                                <a href="${videoLink}" style="text-decoration: none;">
-                                    <img src="${imgUrl}" alt="Watch Video" style="max-width: 100%; border-radius: 8px; display: block;">
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                                                background: rgba(0,0,0,0.6); border-radius: 50%; width: 60px; height: 60px; 
-                                                display: flex; align-items: center; justify-content: center;">
-                                        <span style="color: white; font-size: 30px; margin-left: 5px;">▶</span>
-                                    </div>
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                        padding: 30px 20px;
+                                        margin: 20px 0;
+                                        border-radius: 10px;
+                                        max-width: 600px;">
+                                ${thumbnailHtml}
+                                <h2 style="color: white; margin: 10px 0; font-size: 22px; font-family: Arial, sans-serif;">
+                                    Today's APOD is a Video!
+                                </h2>
+                                <a href="${videoLink}"
+                                   style="display: inline-block;
+                                          background: white;
+                                          color: #667eea;
+                                          padding: 12px 30px;
+                                          text-decoration: none;
+                                          border-radius: 25px;
+                                          font-weight: bold;
+                                          font-family: Arial, sans-serif;
+                                          margin-top: 10px;">
+                                    ► Watch Video on ${isYouTubeEmbed ? 'YouTube' : 'Vimeo'}
                                 </a>
+                                <p style="margin: 14px 0 0 0; font-family: Arial, sans-serif; font-size: 13px;">
+                                    <a href="https://science.nasa.gov/apod/" style="color: #ffffff; text-decoration: underline;">
+                                        View on NASA APOD
+                                    </a>
+                                </p>
                             </div>
-                            <p style="margin-top: 10px;">
-                                <a href="${videoLink}" style="color: #667eea; text-decoration: none; font-weight: bold; font-family: Arial, sans-serif;">
-                                    🎬 Watch Video: ${data.title}
-                                </a>
-                            </p>
                         </center>
                     `;
                 } else {
@@ -223,7 +260,7 @@ async function fetchAPOD() {
 
         const mediaText = data.media_type === 'image'
             ? `View Image: ${data.hdurl || data.url}`
-            : `Watch Video: ${data.url}`;
+            : `Watch Video: ${videoWatchLink || data.url}`;
         const copyrightText = data.copyright ? `Image Credit & Copyright: ${data.copyright}\n\n` : '';
         const plainExplanation = cheerio.load(data.explanation || '').text().trim();
 
@@ -260,4 +297,4 @@ ${physicalAddress}
     }
 }
 
-module.exports = { fetchAPOD };
+module.exports = { fetchAPOD, buildEmail };
