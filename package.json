@@ -26,7 +26,7 @@
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.5",
     "supertest": "^7.3.1",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "protobufjs": "^7.5.4"
