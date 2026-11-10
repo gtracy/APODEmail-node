@@ -52,6 +52,70 @@ describe('apodService', () => {
         expect(result.html).toContain('img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg');
     });
 
+    it('links YouTube embeds to the canonical watch URL in HTML and plain text', async () => {
+        const mockData = {
+            title: 'Test YouTube Video',
+            explanation: 'This is a test video explanation.',
+            date: '2023-11-28',
+            url: 'https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0',
+            media_type: 'video'
+        };
+
+        vi.spyOn(apodScraper, 'getDataByDate').mockResolvedValue(mockData);
+
+        const result = await apodService.fetchAPOD();
+
+        // Canonical watch URL, never the raw /embed/ URL (Error 153 as a top-level link)
+        expect(result.html).toContain('href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"');
+        expect(result.html).not.toContain('/embed/');
+        expect(result.text).toContain('Watch Video: https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+        expect(result.text).not.toContain('/embed/');
+    });
+
+    it('renders YouTube previews with email-safe card markup (no absolute positioning)', async () => {
+        const mockData = {
+            title: 'Test YouTube Video',
+            explanation: 'This is a test video explanation.',
+            date: '2023-11-28',
+            url: 'https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0',
+            media_type: 'video'
+        };
+
+        vi.spyOn(apodScraper, 'getDataByDate').mockResolvedValue(mockData);
+
+        const result = await apodService.fetchAPOD();
+
+        // Thumbnail and pill CTA render inside the gradient hero card
+        expect(result.html).toContain('img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg');
+        expect(result.html).toContain('► Watch Video on YouTube');
+        expect(result.html).toContain('https://science.nasa.gov/apod/');
+        // Email clients strip these, so the video card must not rely on them
+        const mediaBlock = result.html.substring(0, result.html.indexOf('Explanation:'));
+        expect(mediaBlock).not.toContain('position: absolute');
+        expect(mediaBlock).not.toContain('transform:');
+        expect(mediaBlock).not.toContain('display: flex');
+    });
+
+    it('links Vimeo embeds to the canonical vimeo.com URL without an overlay', async () => {
+        const mockData = {
+            title: 'Test Vimeo Video',
+            explanation: 'This is a test vimeo video explanation.',
+            date: '2013-11-30',
+            url: 'https://player.vimeo.com/video/123456789',
+            media_type: 'video'
+        };
+
+        vi.spyOn(apodScraper, 'getDataByDate').mockResolvedValue(mockData);
+
+        const result = await apodService.fetchAPOD();
+
+        expect(result.html).toContain('href="https://vimeo.com/123456789"');
+        expect(result.html).not.toContain('player.vimeo.com');
+        expect(result.text).toContain('Watch Video: https://vimeo.com/123456789');
+        const mediaBlock = result.html.substring(0, result.html.indexOf('Explanation:'));
+        expect(mediaBlock).not.toContain('position: absolute');
+    });
+
     it('should correctly format HTML for a native video APOD', async () => {
         const mockData = {
             title: 'Test Native Video',
