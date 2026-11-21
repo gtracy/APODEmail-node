@@ -444,6 +444,36 @@ footer {
     padding: 0 0 18px calc(1em + 0.65rem);
 }
 
+.faq-item p:has(+ .faq-donate) {
+    padding-bottom: 12px;
+}
+
+.faq-donate {
+    padding: 0 0 18px calc(1em + 0.65rem);
+}
+
+.btn-donate {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background-color: #FFDD00;
+    color: #000000;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(255, 221, 0, 0.2);
+    transition: var(--transition);
+}
+
+.btn-donate:hover {
+    background-color: #ffe84d;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(255, 221, 0, 0.3);
+}
+
 @media (prefers-reduced-motion: no-preference) {
     .faq-item summary::before {
         transition: rotate 0.2s ease;
