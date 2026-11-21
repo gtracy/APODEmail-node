@@ -42,6 +42,8 @@
 
     <link rel="shortcut icon" href="img/favicon.png" type="image/png">
     <link rel="stylesheet" href="css/style.css">
+    <!-- Donation button A/B test (#95): deterministic 50/50 bucketing + GA4 tracking -->
+    <script src="js/donation-ab-test.js" defer></script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -193,10 +195,8 @@
                     </a>
                 </div>
                 <div class="cta">
-                    <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js"
-                        data-name="bmc-button" data-slug="gregtracy" data-color="#FFDD00" data-emoji="☕"
-                        data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000"
-                        data-font-color="#000000" data-coffee-color="#ffffff"></script>
+                    <a id="donation-btn" class="donate-btn" href="https://www.buymeacoffee.com/gregtracy"
+                        target="_blank" rel="noopener">☕ <span id="donation-btn-text">Buy me a coffee</span></a>
                 </div>
             </div>
         </div>
