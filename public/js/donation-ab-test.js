@@ -64,6 +64,40 @@
         return null;
     }
 
+    function getDataLayer() {
+        if (typeof dataLayer !== 'undefined' && Array.isArray(dataLayer)) {
+            return dataLayer;
+        }
+        return null;
+    }
+
+    // Ensures the pushed `['set', 'user_properties', ...]` entry sits ahead of
+    // any queued `['config', ...]` entry in `dataLayer` so the initial
+    // automatic `page_view` beacon carries `up.donation_button_variant` for
+    // every visitor (including single-hit visitors who leave before a second
+    // GA4 event fires).
+    function ensureUserPropsBeforeConfig(dl) {
+        if (!Array.isArray(dl) || dl.length < 2) {
+            return;
+        }
+        var configIdx = -1;
+        for (var i = 0; i < dl.length - 1; i++) {
+            var item = dl[i];
+            if (item && item[0] === 'config') {
+                configIdx = i;
+                break;
+            }
+        }
+        if (configIdx === -1) {
+            return;
+        }
+        var last = dl[dl.length - 1];
+        if (last && last[0] === 'set' && last[1] === 'user_properties') {
+            dl.pop();
+            dl.splice(configIdx, 0, last);
+        }
+    }
+
     // Wires the experiment up against the given DOM/storage/analytics.
     // Defaults to the real browser globals so pages just load this script.
     function initDonationAbTest(deps) {
@@ -74,6 +108,7 @@
         }
         var storage = deps.storage !== undefined ? deps.storage : getStorage();
         var gtagFn = deps.gtag !== undefined ? deps.gtag : getGtag();
+        var dl = deps.dataLayer !== undefined ? deps.dataLayer : getDataLayer();
 
         var variant = resolveVariant(storage, deps.random);
         var copy = VARIANTS[variant];
@@ -85,6 +120,7 @@
 
         if (typeof gtagFn === 'function') {
             gtagFn('set', 'user_properties', { donation_button_variant: copy.label });
+            ensureUserPropsBeforeConfig(dl);
         }
 
         var button = doc.getElementById('donation-btn');

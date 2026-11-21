@@ -38,7 +38,9 @@
         function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
 
-        gtag('config', 'G-SRM03RK860');
+        window.addEventListener('DOMContentLoaded', function () {
+            gtag('config', 'G-SRM03RK860');
+        });
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -139,7 +141,7 @@
                 </div>
                 <div class="cta">
                     <a id="donation-btn" class="donate-btn" href="https://www.buymeacoffee.com/gregtracy"
-                        target="_blank" rel="noopener">☕ <span id="donation-btn-text">Buy me a coffee</span></a>
+                        target="_blank" rel="noopener noreferrer">☕ <span id="donation-btn-text">Buy me a coffee</span></a>
                 </div>
             </div>
         </div>

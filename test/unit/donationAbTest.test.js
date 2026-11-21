@@ -141,4 +141,35 @@ describe('Donation button A/B test (Issue #95)', () => {
             gtag: null
         })).not.toThrow();
     });
+
+    it('orders user_properties ahead of any queued gtag config so initial page_view captures the variant', () => {
+        const { sandbox } = runScript();
+        const api = sandbox.DonationAbTest;
+        const dataLayer = [
+            ['js', new Date()],
+            ['config', 'G-SRM03RK860']
+        ];
+        const gtag = (...args) => { dataLayer.push(args); };
+
+        api.initDonationAbTest({
+            document: { getElementById: () => null },
+            storage: { getItem: () => 'B', setItem: () => {} },
+            gtag,
+            dataLayer
+        });
+
+        const setIdx = dataLayer.findIndex((entry) => entry[0] === 'set' && entry[1] === 'user_properties');
+        const configIdx = dataLayer.findIndex((entry) => entry[0] === 'config');
+        expect(setIdx).toBeGreaterThan(-1);
+        expect(configIdx).toBeGreaterThan(-1);
+        expect(setIdx).toBeLessThan(configIdx);
+        expect(dataLayer[setIdx][2]).toEqual({ donation_button_variant: 'donate' });
+    });
+
+    it('defers gtag config until DOMContentLoaded on both pages so defer script sets user_properties before page_view fires', () => {
+        for (const pagePath of [indexPath, statsPath]) {
+            const html = fs.readFileSync(pagePath, 'utf-8');
+            expect(html).toMatch(/window\.addEventListener\(['"]DOMContentLoaded['"],\s*function\s*\(\)\s*\{\s*gtag\(['"]config['"],\s*['"]G-SRM03RK860['"]\)/);
+        }
+    });
 });
