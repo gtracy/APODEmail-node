@@ -120,6 +120,18 @@ header {
     transition: var(--transition);
 }
 
+.donate-btn[data-variant="B"] {
+    font-family: var(--font-family);
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    padding: 8px 16px;
+}
+
+.donate-btn[data-variant="B"] #donation-btn-icon {
+    display: none;
+}
+
 .donate-btn:hover {
     opacity: 0.85;
     transform: translateY(-1px);

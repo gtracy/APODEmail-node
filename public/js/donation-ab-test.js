@@ -16,8 +16,8 @@
     var STORAGE_KEY = 'apod_donation_variant';
     var BUTTON_URL = 'https://www.buymeacoffee.com/gregtracy';
     var VARIANTS = {
-        A: { text: 'Buy me a coffee', label: 'buy_me_a_coffee' },
-        B: { text: 'Donate', label: 'donate' }
+        A: { text: 'Buy me a coffee', label: 'buy_me_a_coffee', showIcon: true },
+        B: { text: 'Donate', label: 'donate', showIcon: false }
     };
 
     // 50/50 split. `randomFn` is injectable so tests can force each bucket.
@@ -118,12 +118,20 @@
             textEl.textContent = copy.text;
         }
 
+        var iconEl = doc.getElementById('donation-btn-icon');
+        if (iconEl) {
+            iconEl.hidden = !copy.showIcon;
+        }
+
         if (typeof gtagFn === 'function') {
             gtagFn('set', 'user_properties', { donation_button_variant: copy.label });
             ensureUserPropsBeforeConfig(dl);
         }
 
         var button = doc.getElementById('donation-btn');
+        if (button && button.setAttribute) {
+            button.setAttribute('data-variant', variant);
+        }
         if (button && typeof gtagFn === 'function' && button.addEventListener) {
             button.addEventListener('click', function () {
                 gtagFn('event', 'donation_button_click', {

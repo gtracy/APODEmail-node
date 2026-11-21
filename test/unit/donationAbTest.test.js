@@ -19,7 +19,10 @@ describe('Donation button A/B test (Issue #95)', () => {
         const clickHandlers = [];
         const store = storedVariant ? { apod_donation_variant: storedVariant } : {};
         const textEl = { textContent: 'Buy me a coffee' };
+        const iconEl = { hidden: false };
+        const buttonAttrs = {};
         const buttonEl = {
+            setAttribute: (name, value) => { buttonAttrs[name] = value; },
             addEventListener: (event, handler) => {
                 if (event === 'click') clickHandlers.push(handler);
             }
@@ -31,6 +34,7 @@ describe('Donation button A/B test (Issue #95)', () => {
                 getElementById: (id) => {
                     if (id === 'donation-btn') return buttonEl;
                     if (id === 'donation-btn-text') return textEl;
+                    if (id === 'donation-btn-icon') return iconEl;
                     return null;
                 },
                 addEventListener: (event, handler) => {
@@ -48,7 +52,7 @@ describe('Donation button A/B test (Issue #95)', () => {
         }
         vm.createContext(sandbox);
         vm.runInContext(fs.readFileSync(scriptPath, 'utf-8'), sandbox);
-        return { sandbox, gtagCalls, listeners, clickHandlers, store, textEl, buttonEl };
+        return { sandbox, gtagCalls, listeners, clickHandlers, store, textEl, iconEl, buttonEl, buttonAttrs };
     }
 
     it('replaces the third-party Buy Me a Coffee widget with a native anchor on the landing page', () => {
@@ -84,6 +88,8 @@ describe('Donation button A/B test (Issue #95)', () => {
         expect(css).toContain('.donate-btn');
         expect(css).toContain('#FFDD00');
         expect(css).toContain("font-family: 'Cookie', cursive");
+        expect(css).toContain('.donate-btn[data-variant="B"]');
+        expect(css).toContain('font-family: var(--font-family)');
         expect(css).not.toContain('transform: scale(0.6)');
         expect(indexHtml).toContain('family=Cookie');
         expect(statsHtml).toContain('family=Cookie');
@@ -112,13 +118,15 @@ describe('Donation button A/B test (Issue #95)', () => {
         expect(api.resolveVariant(storage, () => 0.1)).toBe('B');
     });
 
-    it('auto-inits on DOMContentLoaded: sets copy, GA4 user property, and click event', () => {
-        const { listeners, gtagCalls, clickHandlers, textEl } = runScript({ storedVariant: 'B' });
+    it('auto-inits on DOMContentLoaded: sets copy, hides icon and switches font on variant B, sets GA4 user property, and click event', () => {
+        const { listeners, gtagCalls, clickHandlers, textEl, iconEl, buttonAttrs } = runScript({ storedVariant: 'B' });
 
         expect(typeof listeners.DOMContentLoaded).toBe('function');
         listeners.DOMContentLoaded();
 
         expect(textEl.textContent).toBe('Donate');
+        expect(iconEl.hidden).toBe(true);
+        expect(buttonAttrs['data-variant']).toBe('B');
         expect(gtagCalls).toContainEqual(['set', 'user_properties', { donation_button_variant: 'donate' }]);
 
         expect(clickHandlers.length).toBe(1);
@@ -128,6 +136,16 @@ describe('Donation button A/B test (Issue #95)', () => {
             button_text: 'Donate',
             link_url: 'https://www.buymeacoffee.com/gregtracy'
         }]);
+    });
+
+    it('keeps coffee emoji visible and sets data-variant="A" for variant A', () => {
+        const { listeners, textEl, iconEl, buttonAttrs } = runScript({ storedVariant: 'A' });
+
+        listeners.DOMContentLoaded();
+
+        expect(textEl.textContent).toBe('Buy me a coffee');
+        expect(iconEl.hidden).toBe(false);
+        expect(buttonAttrs['data-variant']).toBe('A');
     });
 
     it('tolerates missing storage and missing gtag without throwing', () => {
