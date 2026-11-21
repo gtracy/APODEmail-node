@@ -19,8 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 const displayElement = document.getElementById('user-count-display');
-                if (displayElement) {
-                    displayElement.innerHTML = `${data.count.toLocaleString()} active subscribers - <a href="/stats" style="color: inherit; text-decoration: underline;">see more stats</a>`;
+                if (displayElement && typeof data.count === 'number') {
+                    displayElement.innerHTML = `${data.count.toLocaleString()} active subscribers &middot; <a href="/stats">see more stats</a>`;
                 }
             }
         } catch (error) {

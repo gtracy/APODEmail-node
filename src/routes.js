@@ -7,12 +7,38 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const taskQueueService = require('./services/taskQueueService');
+const statsService = require('./services/statsService');
 const validator = require('validator');
 const logger = require('./services/logger');
 
-// Serve index.html
-router.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
+const INDEX_HTML_PATH = path.join(__dirname, '../public/index.html');
+const SSR_USER_COUNT_REGEX = /<!-- SSR_USER_COUNT -->[\s\S]*?<!-- \/SSR_USER_COUNT -->/;
+
+// Serve index.html with server-rendered cached subscriber count
+router.get('/', async (req, res) => {
+    let html;
+    try {
+        html = await fs.promises.readFile(INDEX_HTML_PATH, 'utf8');
+    } catch (error) {
+        logger.error({ err: error, event: 'homepage_read_error' }, 'Error reading index.html');
+        return res.status(500).send('Error loading page');
+    }
+
+    try {
+        const stats = await statsService.getCachedStats();
+        const count = stats && typeof stats.total === 'number' && Number.isFinite(stats.total) && stats.total > 0
+            ? stats.total
+            : null;
+
+        if (count !== null) {
+            const renderedCount = `${count.toLocaleString('en-US')} active subscribers - <a href="/stats" style="color: inherit; text-decoration: underline;">see more stats</a>`;
+            html = html.replace(SSR_USER_COUNT_REGEX, renderedCount);
+        }
+    } catch (error) {
+        logger.error({ err: error, event: 'ssr_user_count_error' }, 'Failed to fetch cached subscriber count for SSR');
+    }
+
+    res.type('html').send(html);
 });
 
 // Signup Endpoint
@@ -340,8 +366,6 @@ router.get('/api/user-count', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch user count' });
     }
 });
-
-const statsService = require('./services/statsService');
 
 // Stats Generation Endpoint (Cron)
 router.get('/tasks/generate-stats', async (req, res) => {

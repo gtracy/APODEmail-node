@@ -1,0 +1,26 @@
+# APOD Email
+
+> Free, independent daily email service delivering NASA's Astronomy Picture of the Day (APOD) to your inbox since 2009. Maintained by Greg Tracy. Not affiliated with or endorsed by NASA.
+
+## How It Works
+
+- **What's included:** Each daily email contains NASA's Astronomy Picture of the Day image or video, the full official astronomer-written explanation, and photographer/NASA credits.
+- **Delivery schedule:** Sent once daily, late morning US Central Time.
+- **Cost:** Completely free with no ads or paid tiers.
+- **Privacy:** Subscriber email addresses are used solely to deliver the daily APOD email and are never sold, rented, or shared with third parties.
+- **Unsubscribe:** One-click unsubscribe link included in every email, or unsubscribe anytime using the form on the homepage.
+
+## Key Links
+
+- [APOD Email Homepage](https://apodemail.org/): Subscribe or unsubscribe to the daily APOD email.
+- [Subscriber Statistics](https://apodemail.org/stats): Live historical subscriber growth chart and total subscriber count.
+- [NASA Astronomy Picture of the Day](https://science.nasa.gov/apod): Official NASA APOD website and archive.
+- [GitHub Repository](https://github.com/gtracy/APODEmail-node): Open-source Node.js source code maintained by Greg Tracy.
+
+## FAQ
+
+- **What is APOD Email?** An independent email delivery service that sends NASA's Astronomy Picture of the Day directly to subscribers every day.
+- **Is APOD Email free?** Yes, it has been 100% free since launching in 2009.
+- **Is APOD Email affiliated with NASA?** No. APOD Email is independently built and maintained by Greg Tracy and delivers publicly available content from NASA's APOD service.
+- **When are emails sent?** Once per day in the late morning (US Central Time).
+- **How do I unsubscribe?** Click the one-click unsubscribe link at the bottom of any email or use the unsubscribe option on https://apodemail.org/.

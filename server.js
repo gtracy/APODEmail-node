@@ -74,7 +74,7 @@ app.use((req, res, next) => {
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('public', { index: false }));
 
 // Rate Limiting
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
