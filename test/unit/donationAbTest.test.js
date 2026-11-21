@@ -78,10 +78,15 @@ describe('Donation button A/B test (Issue #95)', () => {
 
     it('styles the native button with Buy Me a Coffee branding and drops the scale hack', () => {
         const css = fs.readFileSync(cssPath, 'utf-8');
+        const indexHtml = fs.readFileSync(indexPath, 'utf-8');
+        const statsHtml = fs.readFileSync(statsPath, 'utf-8');
 
         expect(css).toContain('.donate-btn');
         expect(css).toContain('#FFDD00');
+        expect(css).toContain("font-family: 'Cookie', cursive");
         expect(css).not.toContain('transform: scale(0.6)');
+        expect(indexHtml).toContain('family=Cookie');
+        expect(statsHtml).toContain('family=Cookie');
     });
 
     it('buckets deterministically: random < 0.5 -> A, >= 0.5 -> B', () => {

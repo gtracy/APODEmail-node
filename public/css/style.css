@@ -108,10 +108,12 @@ header {
     gap: 6px;
     background-color: #FFDD00;
     color: #000000;
-    font-weight: 600;
-    font-size: 0.95rem;
+    font-family: 'Cookie', cursive;
+    font-weight: 400;
+    font-size: 1.35rem;
+    line-height: 1.2;
     text-decoration: none;
-    padding: 8px 16px;
+    padding: 6px 16px;
     border: 1px solid #000000;
     border-radius: 8px;
     white-space: nowrap;
