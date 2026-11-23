@@ -29,12 +29,13 @@ It relies on the `app_engine_apis: true` setting in `app.yaml` and the project's
 
 ## Deployment
 
-To deploy this service independently and restrict ingress to internal App Engine / Cloud Tasks traffic:
+To deploy this service independently:
 
 ```bash
 gcloud app deploy email/app.yaml
-gcloud app services update mailer --ingress=internal-only
 ```
+
+> **Note on Access Control & Ingress:** Access to `/emailqueue` is restricted via `login: admin` in `email/app.yaml` (enforced by Google Front End, which permits internal Cloud Tasks `appEngineHttpRequest` dispatches) and `X-AppEngine-TaskName` header validation in `email/main.py`. Do **not** set `--ingress=internal-only` on the App Engine `mailer` service, as App Engine's `internal-only` ingress setting blocks managed non-VPC services including Cloud Tasks.
 
 ## Testing Strategy
 

@@ -28,7 +28,7 @@ class EmailWorkerTestCase(unittest.TestCase):
 
     @patch('main.mail')
     def test_email_queue_unauthorized_empty_header(self, mock_mail):
-        response = self.app.post('/emailqueue', headers={'X-AppEngine-TaskName': ''}, data={
+        response = self.app.post('/emailqueue', headers={'X-AppEngine-TaskName': '   '}, data={
             'email': 'test@example.com',
             'subject': 'Test Subject',
             'body': '<h1>Test Body</h1>'

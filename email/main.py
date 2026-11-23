@@ -12,8 +12,10 @@ app.wsgi_app = wrap_wsgi_app(app.wsgi_app)
 def email_queue():
     # Verify request originated from App Engine Task Queue / Cloud Tasks
     # Google Front End strips external X-AppEngine-* headers before forwarding.
-    if not request.headers.get('X-AppEngine-TaskName'):
-        logging.warning("Unauthorized /emailqueue request from %s: missing X-AppEngine-TaskName header", request.remote_addr)
+    task_name = (request.headers.get('X-AppEngine-TaskName') or '').strip()
+    if not task_name:
+        client_ip = request.headers.get('X-AppEngine-User-IP') or request.remote_addr
+        logging.warning("Unauthorized /emailqueue request from %s: missing X-AppEngine-TaskName header", client_ip)
         return "Forbidden", 403
 
     try:
