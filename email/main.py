@@ -10,6 +10,12 @@ app.wsgi_app = wrap_wsgi_app(app.wsgi_app)
 
 @app.route('/emailqueue', methods=['POST'])
 def email_queue():
+    # Verify request originated from App Engine Task Queue / Cloud Tasks
+    # Google Front End strips external X-AppEngine-* headers before forwarding.
+    if not request.headers.get('X-AppEngine-TaskName'):
+        logging.warning("Unauthorized /emailqueue request from %s: missing X-AppEngine-TaskName header", request.remote_addr)
+        return "Forbidden", 403
+
     try:
         email = request.form.get('email')
         body = request.form.get('body')

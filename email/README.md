@@ -29,10 +29,11 @@ It relies on the `app_engine_apis: true` setting in `app.yaml` and the project's
 
 ## Deployment
 
-To deploy this service independently:
+To deploy this service independently and restrict ingress to internal App Engine / Cloud Tasks traffic:
 
 ```bash
 gcloud app deploy email/app.yaml
+gcloud app services update mailer --ingress=internal-only
 ```
 
 ## Testing Strategy
@@ -64,6 +65,7 @@ You can run the application directly using Python 3.11.
 2.  **Send a Request:**
     ```bash
     curl -X POST http://localhost:8080/emailqueue \
+      -H "X-AppEngine-TaskName: local-test" \
       -d "email=test@example.com" \
       -d "subject=Test" \
       -d "body=<h1>Hello</h1>"
