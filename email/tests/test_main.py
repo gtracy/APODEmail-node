@@ -12,6 +12,31 @@ class EmailWorkerTestCase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
         self.app.testing = True
+        self.task_headers = {'X-AppEngine-TaskName': 'test-task-123'}
+
+    @patch('main.mail')
+    def test_email_queue_unauthorized_missing_header(self, mock_mail):
+        response = self.app.post('/emailqueue', data={
+            'email': 'test@example.com',
+            'subject': 'Test Subject',
+            'body': '<h1>Test Body</h1>'
+        })
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data.decode('utf-8'), 'Forbidden')
+        mock_mail.EmailMessage.assert_not_called()
+
+    @patch('main.mail')
+    def test_email_queue_unauthorized_empty_header(self, mock_mail):
+        response = self.app.post('/emailqueue', headers={'X-AppEngine-TaskName': '   '}, data={
+            'email': 'test@example.com',
+            'subject': 'Test Subject',
+            'body': '<h1>Test Body</h1>'
+        })
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data.decode('utf-8'), 'Forbidden')
+        mock_mail.EmailMessage.assert_not_called()
 
     @patch('main.mail')
     def test_email_queue_success(self, mock_mail):
@@ -19,7 +44,7 @@ class EmailWorkerTestCase(unittest.TestCase):
         mock_message_instance = MagicMock()
         mock_mail.EmailMessage.return_value = mock_message_instance
 
-        response = self.app.post('/emailqueue', data={
+        response = self.app.post('/emailqueue', headers=self.task_headers, data={
             'email': 'test@example.com',
             'subject': 'Test Subject',
             'body': '<h1>Test Body</h1>',
@@ -43,7 +68,7 @@ class EmailWorkerTestCase(unittest.TestCase):
         mock_message_instance = MagicMock()
         mock_mail.EmailMessage.return_value = mock_message_instance
 
-        response = self.app.post('/emailqueue', data={
+        response = self.app.post('/emailqueue', headers=self.task_headers, data={
             'email': 'test@example.com',
             'subject': 'Test Subject',
             'body': '<h1>Test Body</h1>',
@@ -67,7 +92,7 @@ class EmailWorkerTestCase(unittest.TestCase):
         mock_message_instance = MagicMock()
         mock_mail.EmailMessage.return_value = mock_message_instance
 
-        response = self.app.post('/emailqueue', data={
+        response = self.app.post('/emailqueue', headers=self.task_headers, data={
             'email': 'test@example.com',
             'subject': 'APOD Email - Test',
             'body': 'Body',
@@ -85,7 +110,7 @@ class EmailWorkerTestCase(unittest.TestCase):
         mock_message_instance.send.side_effect = Exception("SMTP Error")
         mock_mail.EmailMessage.return_value = mock_message_instance
 
-        response = self.app.post('/emailqueue', data={
+        response = self.app.post('/emailqueue', headers=self.task_headers, data={
             'email': 'test@example.com',
             'subject': 'Test',
             'body': 'Body'

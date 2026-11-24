@@ -35,6 +35,8 @@ To deploy this service independently:
 gcloud app deploy email/app.yaml
 ```
 
+> **Note on Access Control & Ingress:** Access to `/emailqueue` is restricted via `login: admin` in `email/app.yaml` (enforced by Google Front End, which permits internal Cloud Tasks `appEngineHttpRequest` dispatches) and `X-AppEngine-TaskName` header validation in `email/main.py`. Do **not** set `--ingress=internal-only` on the App Engine `mailer` service, as App Engine's `internal-only` ingress setting blocks managed non-VPC services including Cloud Tasks.
+
 ## Testing Strategy
 
 ### 1. Unit Tests (Local)
@@ -64,6 +66,7 @@ You can run the application directly using Python 3.11.
 2.  **Send a Request:**
     ```bash
     curl -X POST http://localhost:8080/emailqueue \
+      -H "X-AppEngine-TaskName: local-test" \
       -d "email=test@example.com" \
       -d "subject=Test" \
       -d "body=<h1>Hello</h1>"
