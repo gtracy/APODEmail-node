@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:apod="https://science.nasa.gov/apod/">
+<channel><title>Astronomy Picture of the Day</title>
+<item>
+		<title>SPHEREx Seeing Through Dust</title>
+		<link>https://science.nasa.gov/image-article/apod-2026-november-25-spherex-seeing-through-dust/</link>
+		<guid isPermaLink="true">https://science.nasa.gov/image-article/apod-2026-november-25-spherex-seeing-through-dust/</guid>
+		<pubDate>Wed, 25 Nov 2026 05:05:00 +0000</pubDate>
+		<apod:url>https://science.nasa.gov/image-article/apod-2026-november-25-spherex-seeing-through-dust/</apod:url>
+		<apod:hdurl>https://assets.science.nasa.gov/dynamicimage/assets/science/cds/apod/apod/2026/november/spherex_1.2micron.png?w=3274&#038;h=2040&#038;fit=clip</apod:hdurl>
+		<apod:discussion>https://asterisk.apod.com/discuss_apod.php?date=261125</apod:discussion>
+		<apod:credit><![CDATA[Credit: NASA/JPL-Caltech SPHEREx; data from NASA/IPAC IRSA. Processing: The Bright Nobles (Muhammet Mücahit Soylu, Serdar Aydın, Furkan Küpeli), ChronosphereX (chronospherex.com).]]></apod:credit>
+		<apod:copyright><![CDATA[Credit: NASA/JPL-Caltech SPHEREx; data from NASA/IPAC IRSA. Processing: The Bright Nobles (Muhammet Mücahit Soylu, Serdar Aydın, Furkan Küpeli), ChronosphereX (chronospherex.com).]]></apod:copyright>
+		<apod:alt>The video captures the plane of the Milky Way where the plane runs through the horizontal center. There is a bright bulge at the center where a bunch of stars are clustered. Stars dot the sky above and below the plane. The video cycles through the different colors that SPHEREx captures. Some colors show that the starlight near the Milky Way center is mostly blocked by dust along the plane. Other colors are able to travel through the dust and reach SPHEREx, giving a clearer view of the brighter Milky Way center.</apod:alt>
+		<apod:primary_image_alt>The video captures the plane of the Milky Way where the plane runs through the horizontal center. There is a bright bulge at the center where a bunch of stars are clustered. Stars dot the sky above and below the plane. The video cycles through the different colors that SPHEREx captures. Some colors show that the starlight near the Milky Way center is mostly blocked by dust along the plane. Other colors are able to travel through the dust and reach SPHEREx, giving a clearer view of the brighter Milky Way center.</apod:primary_image_alt>
+		<apod:explanation><![CDATA[<strong>Explanation:</strong> What is blocking the center of the Milky Way? During its <a href="https://spaceplace.nasa.gov/galaxies-age/en/">13 billion years</a>, our Milky Way has collected a lot of dust. In contrast to the skin cells, dirt, pollen, and other debris that make up the dust behind your couch, <a href="https://science.nasa.gov/universe/stories/quick-reads/be-glad-you-dont-have-to-dust-in-space/">cosmic dust</a> is hundreds of times smaller and made of tiny compounds of oxygen, carbon, and other elements <a href="https://www.thesciencewriter.org/small-things-stories/cosmic-cycle-of-dust">released into space</a> when a <a href="https://science.nasa.gov/universe/stories/quick-reads/the-lives-times-and-deaths-of-stars/">star dies</a>. Today’s video shows <a href="https://science.nasa.gov/ems/07_infraredwaves/">infrared</a> light from the Milky Way’s center gathered by NASA’s <a href="https://science.nasa.gov/mission/spherex/">SPHEREx</a> satellite. Each <a href="https://science.nasa.gov/ems/04_energytoimage/">false color</a> in the video corresponds to the infrared color associated with the <a href="https://science.nasa.gov/mission/hubble/science/science-behind-the-discoveries/wavelengths/">wavelength</a> shown in the top left. In the near-infrared, like 1.2 <a href="https://pa.msu.edu/machine-shop/mils-vs-microns.aspx">microns</a>, light gets absorbed and scatters off of dust particles. SPHEREx then sees the Galactic Center almost entirely blocked by <a href="https://science.nasa.gov/image-article/apod-2026-may-20-the-dark-wolf-nebula/">clouds of dust</a>. In the mid-infrared, though, light is able to pierce through the dust and reach SPHEREx. This is similar to, but not exactly, <a href="https://gml.noaa.gov/grad/about/redsky/">why sunsets are red</a>!<br><br><strong>Tomorrow's picture:</strong> a sandy view of the Milky Way]]></apod:explanation>
+		<description><![CDATA[<strong>Explanation:</strong> What is blocking the center of the Milky Way? During its <a href="https://spaceplace.nasa.gov/galaxies-age/en/">13 billion years</a>, our Milky Way has collected a lot of dust. In contrast to the skin cells, dirt, pollen, and other debris that make up the dust behind your couch, <a href="https://science.nasa.gov/universe/stories/quick-reads/be-glad-you-dont-have-to-dust-in-space/">cosmic dust</a> is hundreds of times smaller and made of tiny compounds of oxygen, carbon, and other elements <a href="https://www.thesciencewriter.org/small-things-stories/cosmic-cycle-of-dust">released into space</a> when a <a href="https://science.nasa.gov/universe/stories/quick-reads/the-lives-times-and-deaths-of-stars/">star dies</a>. Today’s video shows <a href="https://science.nasa.gov/ems/07_infraredwaves/">infrared</a> light from the Milky Way’s center gathered by NASA’s <a href="https://science.nasa.gov/mission/spherex/">SPHEREx</a> satellite. Each <a href="https://science.nasa.gov/ems/04_energytoimage/">false color</a> in the video corresponds to the infrared color associated with the <a href="https://science.nasa.gov/mission/hubble/science/science-behind-the-discoveries/wavelengths/">wavelength</a> shown in the top left. In the near-infrared, like 1.2 <a href="https://pa.msu.edu/machine-shop/mils-vs-microns.aspx">microns</a>, light gets absorbed and scatters off of dust particles. SPHEREx then sees the Galactic Center almost entirely blocked by <a href="https://science.nasa.gov/image-article/apod-2026-may-20-the-dark-wolf-nebula/">clouds of dust</a>. In the mid-infrared, though, light is able to pierce through the dust and reach SPHEREx. This is similar to, but not exactly, <a href="https://gml.noaa.gov/grad/about/redsky/">why sunsets are red</a>!<br><br><strong>Tomorrow's picture:</strong> a sandy view of the Milky Way]]></description>
+		<content:encoded><![CDATA[<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title> APOD: 2026 November 25 - SPHEREx Seeing Through Dust</title>
+<link rel="canonical" href="https://science.nasa.gov/image-article/apod-2026-november-25-spherex-seeing-through-dust/">
+<!-- gsfc meta tags -->
+<meta name="orgcode" content="661">
+<meta name="rno" content="Dana Bolles">
+<meta name="content-owner" content="Robert Nemiroff">
+<meta name="webmaster" content="Stephen.F.Fantasia.1">
+<meta name="description" content="Explanation: What is blocking the center of the Milky Way? During its 13 billion years, our Milky Way has collected a lot of dust. In contrast to the skin cells, dirt, pollen, and other debris that make up the dust behind your couch, cosmic dust is hundreds of times smaller and made of tiny compounds of oxygen, carbon, and other elements released into space when a star dies. Today’s video shows infrared light from the Milky Way’s center gathered by NASA’s SPHEREx satellite. Each false color in the video corresponds to the infrared color associated with the wavelength shown in the top left. In the near-infrared, like 1.2 microns, light gets absorbed and scatters off of dust particles. SPHEREx then sees the Galactic Center almost entirely blocked by clouds of dust. In the mid-infrared, though, light is able to pierce through the dust and reach SPHEREx. This is similar to, but not exactly, why sunsets are red!Tomorrow&#039;s picture: a sandy view of the Milky Way">
+<!-- -->
+<meta name="keywords" content="spherex seeing through dust">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SPHEREx Seeing Through Dust">
+<meta property="og:url" content="https://science.nasa.gov/image-article/apod-2026-november-25-spherex-seeing-through-dust/">
+<meta property="og:site_name" content="NASA Science">
+<meta property="og:image" content="https://assets.science.nasa.gov/dynamicimage/assets/science/cds/apod/apod/2026/november/spherex_1.2micron.png?w=3274&#038;h=2040&#038;fit=clip">
+<meta property="og:image:secure_url" content="https://assets.science.nasa.gov/dynamicimage/assets/science/cds/apod/apod/2026/november/spherex_1.2micron.png?w=3274&#038;h=2040&#038;fit=clip">
+<meta property="og:image:alt" content="A plane of dust clouds blocks light across the horizontal center of the image. Above and below are speckled with many stars.">
+<meta property="article:published_time" content="2026-11-25T00:05:00-05:00">
+<meta property="article:modified_time" content="2026-11-24T14:57:14-05:00">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SPHEREx Seeing Through Dust">
+<meta name="twitter:site" content="@NASA">
+<meta name="twitter:creator" content="@NASA">
+<meta name="twitter:image" content="https://assets.science.nasa.gov/dynamicimage/assets/science/cds/apod/apod/2026/november/spherex_1.2micron.png?w=3274&#038;h=2040&#038;fit=clip">
+</head>
+<body BGCOLOR="#F4F4FF" text="#000000" link="#0000FF" vlink="#7F0F9F"
+alink="#FF0000">
+
+<center>
+<h1> Astronomy Picture of the Day </h1>
+<p>
+
+<a href="https://science.nasa.gov/apod/archive/">Discover the cosmos!</a>
+Each day a different image or photograph of our fascinating universe is
+featured, along with a brief explanation written by a professional astronomer.
+<p>
+
+2026 November 25<br>
+
+<video controls title="">
+<source src="https://assets.science.nasa.gov/content/dam/science/cds/apod/apod/2026/november/galaksi_merkezi_spherex.mp4" type="video/mp4">
+</video>
+</center>
+
+<center>
+<b> SPHEREx Seeing Through Dust </b> <br>
+
+<b>Image Credit &
+<a href="https://science.nasa.gov/apod/about-apod/">Copyright</a>:</b>
+
+Credit: NASA/JPL-Caltech SPHEREx; data from NASA/IPAC IRSA. Processing: The Bright Nobles (Muhammet Mücahit Soylu, Serdar Aydın, Furkan Küpeli), ChronosphereX (chronospherex.com).
+</center>
+
+<p>
+
+<b> Explanation: </b>
+
+<strong>Explanation:</strong> What is blocking the center of the Milky Way? During its <a href="https://spaceplace.nasa.gov/galaxies-age/en/">13 billion years</a>, our Milky Way has collected a lot of dust. In contrast to the skin cells, dirt, pollen, and other debris that make up the dust behind your couch, <a href="https://science.nasa.gov/universe/stories/quick-reads/be-glad-you-dont-have-to-dust-in-space/">cosmic dust</a> is hundreds of times smaller and made of tiny compounds of oxygen, carbon, and other elements <a href="https://www.thesciencewriter.org/small-things-stories/cosmic-cycle-of-dust">released into space</a> when a <a href="https://science.nasa.gov/universe/stories/quick-reads/the-lives-times-and-deaths-of-stars/">star dies</a>. Today’s video shows <a href="https://science.nasa.gov/ems/07_infraredwaves/">infrared</a> light from the Milky Way’s center gathered by NASA’s <a href="https://science.nasa.gov/mission/spherex/">SPHEREx</a> satellite. Each <a href="https://science.nasa.gov/ems/04_energytoimage/">false color</a> in the video corresponds to the infrared color associated with the <a href="https://science.nasa.gov/mission/hubble/science/science-behind-the-discoveries/wavelengths/">wavelength</a> shown in the top left. In the near-infrared, like 1.2 <a href="https://pa.msu.edu/machine-shop/mils-vs-microns.aspx">microns</a>, light gets absorbed and scatters off of dust particles. SPHEREx then sees the Galactic Center almost entirely blocked by <a href="https://science.nasa.gov/image-article/apod-2026-may-20-the-dark-wolf-nebula/">clouds of dust</a>. In the mid-infrared, though, light is able to pierce through the dust and reach SPHEREx. This is similar to, but not exactly, <a href="https://gml.noaa.gov/grad/about/redsky/">why sunsets are red</a>!<br><br><strong>Tomorrow's picture:</strong> a sandy view of the Milky Way
+<p> <center>
+
+
+<p> <hr>
+<a href="https://science.nasa.gov/image-article/apod-2026-november-24-galaxies-battle-in-the-ngc-7771-group/">&lt;</a>
+| <a href="https://science.nasa.gov/apod/archive/">Archive</a>
+| <a href="https://science.nasa.gov/apod/archive/">Index</a>
+| <a href="https://science.nasa.gov/apod/archive/">Search</a>
+| <a href="https://science.nasa.gov/apod/calendar/">Calendar</a>
+| <a href="/feed/apod-basic/">RSS</a>
+| <a href="https://science.nasa.gov/apod/education-links/">Education</a>
+| <a href="https://science.nasa.gov/apod/about-apod/">About APOD</a>
+| <a href="https://asterisk.apod.com/discuss_apod.php?date=261125">Discuss</a>
+| &gt;
+
+<hr><p>
+<b> Authors & editors: </b>
+Keighley Rockcliffe, Robert Nemiroff, Jerry Bonnell, Cecilia Chirenti<br>
+<b>NASA Official: </b> Dana Bolles<a href="https://science.nasa.gov/apod/about-apod/">Specific rights apply</a>.<br>
+<a href="http://www.nasa.gov/about/highlights/HP_Privacy.html">NASA Web
+Privacy Policy and Important Notices</a><br>
+<b>A service of:</b>
+<a href="http://astrophysics.gsfc.nasa.gov/">ASD</a> at
+<a href="http://www.nasa.gov/">NASA</a> /
+<a href="http://www.nasa.gov/centers/goddard/">GSFC</a>
+<br><b>&</b> <a href="http://www.mtu.edu/">Michigan Tech. U.</a><br>
+</center>
+</body>
+</html>]]></content:encoded>
+	</item>
+</channel></rss>
