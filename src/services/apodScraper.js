@@ -83,7 +83,7 @@ function parseRss(xmlText, targetDateStr) {
             const pubDate = item.find('pubDate').text();
             const apodUrl = item.find('apod\\:url').text();
             const link = item.find('link').text();
-            const itemDate = pubDate ? DateTime.fromRFC2822(pubDate).toISODate() : null;
+            const itemDate = pubDate ? DateTime.fromRFC2822(pubDate, { setZone: true }).toISODate() : null;
 
             if (itemDate === targetDateStr || apodUrl.toLowerCase().includes(slug) || link.toLowerCase().includes(slug)) {
                 targetItem = item;
@@ -101,7 +101,7 @@ function parseRss(xmlText, targetDateStr) {
     const explanation = cleanExplanation(rawExplanation);
 
     const pubDate = targetItem.find('pubDate').text();
-    const parsedDate = pubDate ? DateTime.fromRFC2822(pubDate) : null;
+    const parsedDate = pubDate ? DateTime.fromRFC2822(pubDate, { setZone: true }) : null;
     const date = parsedDate && parsedDate.isValid ? parsedDate.toISODate() : (targetDateStr || DateTime.now().toISODate());
 
     const hdurl = targetItem.find('apod\\:hdurl').text().trim() || undefined;

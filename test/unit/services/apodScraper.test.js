@@ -248,6 +248,7 @@ describe('parseRss', () => {
         const result = parseRss(sampleRss);
         expect(result).not.toBeNull();
         expect(result.title).toBe('Sombrero Galaxy');
+        expect(result.date).toBe('2026-10-05');
         expect(result.media_type).toBe('image');
         expect(result.url).toBe('https://assets.science.nasa.gov/apod/sombrero.jpg');
         expect(result.copyright).toBe('John Doe');
@@ -258,10 +259,39 @@ describe('parseRss', () => {
         const result = parseRss(sampleRss, '2026-09-09');
         expect(result).not.toBeNull();
         expect(result.title).toBe('Winking Star Video');
+        expect(result.date).toBe('2026-09-09');
         expect(result.media_type).toBe('video');
         expect(result.url).toBe('https://assets.science.nasa.gov/apod/star.mp4');
         expect(result.copyright).toBe('Jane Astronomer');
         expect(result.explanation).toBe('A binary star system winks.');
+    });
+
+    it('preserves the pubDate calendar date regardless of host local timezone', () => {
+        // NASA publishes APOD RSS items around 00:05 Eastern (04:05 or 05:05 +0000).
+        // Without { setZone: true }, hosts in UTC-5/-6/-7/-8 shift pubDate back to the previous day.
+        const rssWithoutDateSlug = `<?xml version="1.0" encoding="UTF-8" ?>
+        <rss version="2.0" xmlns:apod="https://science.nasa.gov/apod/">
+        <channel>
+            <item>
+                <title>First Post</title>
+                <link>https://science.nasa.gov/apod/first/</link>
+                <pubDate>Tue, 24 Nov 2026 05:05:00 +0000</pubDate>
+                <apod:hdurl>https://assets.science.nasa.gov/apod/first.jpg</apod:hdurl>
+                <apod:explanation><![CDATA[<strong>Explanation:</strong> First post explanation.]]></apod:explanation>
+            </item>
+            <item>
+                <title>Second Post</title>
+                <link>https://science.nasa.gov/apod/second/</link>
+                <pubDate>Wed, 25 Nov 2026 05:05:00 +0000</pubDate>
+                <apod:hdurl>https://assets.science.nasa.gov/apod/second.jpg</apod:hdurl>
+                <apod:explanation><![CDATA[<strong>Explanation:</strong> Second post explanation.]]></apod:explanation>
+            </item>
+        </channel>
+        </rss>`;
+
+        const matched = parseRss(rssWithoutDateSlug, '2026-11-25');
+        expect(matched.title).toBe('Second Post');
+        expect(matched.date).toBe('2026-11-25');
     });
 });
 
