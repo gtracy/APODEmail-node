@@ -9,6 +9,33 @@ describe('Social Metadata & Assets (Issue #49)', () => {
     const statsPath = path.join(rootDir, 'src/templates/visualization.html');
     const imagePath = path.join(rootDir, 'public/img/stargazers.jpg');
     const earthPath = path.join(rootDir, 'public/img/earth.jpg');
+    const faviconPngPath = path.join(rootDir, 'public/img/favicon.png');
+    const faviconIcoPath = path.join(rootDir, 'public/favicon.ico');
+
+    it('should have favicon link tags pointing at the root-relative PNG in index.html and visualization.html (Issue #102)', () => {
+        for (const pagePath of [indexPath, statsPath]) {
+            const html = fs.readFileSync(pagePath, 'utf-8');
+            const $ = cheerio.load(html);
+            const faviconHref = $('link[rel="icon"], link[rel="shortcut icon"]').attr('href');
+
+            expect(faviconHref).toBe('/img/favicon.png');
+        }
+    });
+
+    it('should have favicon assets on disk, including a root /favicon.ico fallback (Issue #102)', () => {
+        expect(fs.existsSync(faviconPngPath)).toBe(true);
+
+        // Root fallback so browsers requesting /favicon.ico get a 200
+        // (express.static serves public/ before the rate limiter runs).
+        expect(fs.existsSync(faviconIcoPath)).toBe(true);
+
+        // Verify the root ICO is a real ICO file (00 00 01 00 header)
+        const buffer = fs.readFileSync(faviconIcoPath);
+        expect(buffer[0]).toBe(0x00);
+        expect(buffer[1]).toBe(0x00);
+        expect(buffer[2]).toBe(0x01);
+        expect(buffer[3]).toBe(0x00);
+    });
 
     it('should have the 1200x628 summary_large_image asset under public/img/', () => {
         expect(fs.existsSync(imagePath)).toBe(true);
