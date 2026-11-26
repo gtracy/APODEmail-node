@@ -158,7 +158,16 @@ function parseHtml(htmlText) {
 
     if (!title) {
         const titleTag = $('title').text().trim();
-        title = titleTag.includes(' - ') ? titleTag.split(' - ')[1].trim() : (titleTag || $('b').first().text().trim());
+        // Titles are "APOD: 2026 October 1 - Test Nebula" (hyphen) or
+        // "APOD: 2026 July 13 – Aurorae from Space" (en dash) on mirror pages.
+        const parts = titleTag.split(/ - | – /);
+        title = parts.length > 1 ? parts[1].trim() : titleTag;
+        // A bare site name is not a post title: old archive pages carry
+        // <title>Astronomy Picture of the Day</title> with the real title
+        // in the first <b> element.
+        if (!title || title === 'Astronomy Picture of the Day') {
+            title = $('b').first().text().trim() || title;
+        }
     }
 
     // Explanation: locate the paragraph containing "Explanation:"
@@ -168,7 +177,9 @@ function parseHtml(htmlText) {
     // Metadata (Date & Credit)
     const meta = {};
     $('.media-detail-hero__meta-row, tr').each((_, row) => {
-        const key = $(row).find('th').text().trim().toLowerCase();
+        // Header cells read "Date:" / "Credit:" on science.nasa.gov pages;
+        // strip the trailing colon so meta['date'] / meta['credit'] resolve.
+        const key = $(row).find('th').text().trim().toLowerCase().replace(/:$/, '');
         if (key) {
             meta[key.startsWith('credit') ? 'credit' : key] = $(row).find('td').text().replace(/\s+/g, ' ').trim();
         }
